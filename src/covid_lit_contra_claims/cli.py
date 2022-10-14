@@ -20,14 +20,15 @@ from .evaluation.Evaluation import generate_report
 @click.option('--learning_rate', 'learning_rate', default=1e-6)
 @click.option('--batch_size', 'batch_size', default=2)
 @click.option('--epochs', 'epochs', default=3)
+@click.option('--SEED', 'SEED', default=42)
 def main(out_dir, model, train_datasets, eval_datasets, train_prep_experiment, report,
-         learning_rate, batch_size, epochs):
+         learning_rate, batch_size, epochs, SEED):
     """Run main function."""
 
     # Load training and evaluation datasets
-    train_dataset_dict, val_dataset_dict, test_dataset_dict = load_train_datasets(train_datasets)
+    train_dataset_dict, val_dataset_dict, test_dataset_dict = load_train_datasets(train_datasets, SEED=SEED)
     # Two versions of CovidNLI: One where test is a separate network from train
-    eval_dataset_dict = load_additional_eval_datasets(eval_datasets)
+    eval_dataset_dict = load_additional_eval_datasets(eval_datasets, SEED=SEED)
 
     # Conduct any input preprocessing for various experiments
     prepared_train_dataset_dict = prepare_training_data(train_dataset_dict, train_prep_experiment)

@@ -4,7 +4,7 @@ Collection of functions for making experimental perturbations to the data for co
 
 # -*- coding: utf-8 -*-
 
-import datasets
+from datasets import concatenate_datasets
 
 
 def prepare_training_data(train_dataset_list, train_prep_experiment: str):
@@ -18,7 +18,7 @@ def prepare_training_data(train_dataset_list, train_prep_experiment: str):
 
     if train_prep_experiment == "combined":
         # Combining into a single, mixed up dataset. Returning a list for future processing.
-        train_dataset_list = [datasets.concatenate_datasets(train_dataset_list).shuffle()]
+        train_dataset_list = [concatenate_datasets(train_dataset_list).shuffle()]
 
     elif train_prep_experiment == "sequential":
         print(f"Sequential training data preparation. Dataset list will not be perturbed.")
