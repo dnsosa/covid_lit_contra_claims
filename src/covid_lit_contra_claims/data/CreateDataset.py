@@ -83,3 +83,17 @@ def create_roam_dataset(roam_path):
         roam_dataset[split] = roam_dataset[split].cast_column('labels', ClassLabels)
 
     return roam_dataset
+
+
+# TODO: Create this dataset
+def create_roamPHE_dataset(roam_path):
+    # Load
+    # Preprocess
+    pass
+
+
+# TODO: Create this dataset
+def create_roamDD_dataset(roam_path):
+    # Load
+    # Preprocess
+    pass

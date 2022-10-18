@@ -4,17 +4,12 @@ Collection of functions for loading data for covid_lit_contra_claims.
 
 # -*- coding: utf-8 -*-
 
-from covid_lit_contra_claims import MEDNLI_TRAIN_PATH, MEDNLI_DEV_PATH, MEDNLI_TEST_PATH, MANCON_XML_PATH, ROAM_PATH
-
+from .constants import model_id_mapper, MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, MEDNLI_TRAIN_PATH, MEDNLI_DEV_PATH, \
+    MEDNLI_TEST_PATH, MANCON_XML_PATH, ROAM_SEP_PATH, ROAM_ALL_PATH
 from .CreateDataset import *
 
 
-# TODO: Make these arguments in CLI maybe?
-MANCON_NEUTRAL_FRAC = 1
-MANCON_TRAIN_FRAC = 0.67
-
-
-def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, SEED, truncation=True,
+def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, truncation=True, SEED=42,
                                       mancon_neutral_frac=MANCON_NEUTRAL_FRAC, mancon_train_frac=MANCON_TRAIN_FRAC):
     if corpus_id == "multinli":
         raw_dataset = create_multinli_dataset(SEED=SEED)
@@ -26,7 +21,17 @@ def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, SEED, truncation=Tru
         raw_dataset = create_mancon_dataset(MANCON_XML_PATH, mancon_neutral_frac, mancon_train_frac, SEED=SEED)
 
     elif corpus_id == "roam":
-        raw_dataset = create_roam_dataset(ROAM_PATH)
+        raw_dataset = create_roam_dataset(ROAM_SEP_PATH)
+
+    elif corpus_id == "roamAll":
+        # TODO: Check this will work
+        raw_dataset = create_roam_dataset(ROAM_ALL_PATH)
+
+    elif corpus_id == "roamPHE":
+        raw_dataset = create_roamPHE_dataset(ROAM_SEP_PATH)
+
+    elif corpus_id == "roamDD":
+        raw_dataset = create_roamDD_dataset(ROAM_SEP_PATH)
 
     else:
         print("Invalid corpus ID. Pre-processing failed. ")
@@ -43,11 +48,13 @@ def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, SEED, truncation=Tru
     return tokenized_datasets
 
 
-def load_train_datasets(train_datasets_id: str, SEED: int):
+def load_train_datasets(train_datasets_id: str, tokenizer, truncation: bool, SEED: int):
     """
     Create a list of HF Dataset objects from a list of identifiers.
 
     :param train_datasets_id: string identifier of which datasets to load
+    :param tokenizer: model's tokenizer for dataset
+    :param truncation: boolean indicating if input should be truncated when tokenized
     :param SEED: random seed
     :return: dictionaries of the created train, val, and test Datasets
     """
@@ -55,14 +62,11 @@ def load_train_datasets(train_datasets_id: str, SEED: int):
     val_dataset_dict = {}
     test_dataset_dict = {}
 
-    #TODO
-    permissable_train_ids = set(["multinli", "mednli", "manconcorpus", "roam", ...])
+    permissable_train_ids = {"multinli", "mednli", "manconcorpus", "roam", "roamAll" "roamPHE", "roamDD"}
     for data_id in train_datasets_id.split("_"):
         if data_id in permissable_train_ids:
             print(f"====Creating {data_id} Dataset object for train/val/test...====")
-            # TODO 1: Add tokenizer to this call
-            # TODO 2: Add truncation to this call
-            dataset = preprocess_nli_corpus_for_pytorch(data_id, SEED=SEED)
+            dataset = preprocess_nli_corpus_for_pytorch(data_id, tokenizer, truncation=truncation, SEED=SEED)
             train_dataset_dict[data_id] = dataset['train']
             val_dataset_dict[data_id] = dataset['val']
             test_dataset_dict[data_id] = dataset['test']
@@ -73,24 +77,23 @@ def load_train_datasets(train_datasets_id: str, SEED: int):
     return train_dataset_dict, val_dataset_dict, test_dataset_dict
 
 
-def load_additional_eval_datasets(eval_datasets_id: str, SEED: int):
+def load_additional_eval_datasets(eval_datasets_id: str, tokenizer, truncation: bool, SEED: int):
     """
     Create additional HF Dataset objects from a list of identifiers. These are additional evaluations or benchmarks.
 
     :param eval_datasets_id: string identifier of which datasets to load
+    :param tokenizer: model's tokenizer for dataset
+    :param truncation: boolean indicating if input should be truncated when tokenized
     :param SEED: random seed
     :return: dictionary of the created evaluation (test) Datasets
     """
     eval_dataset_dict = {}
 
-    #TODO
-    permissable_eval_ids = set([])
+    permissable_eval_ids = {"multinli", "mednli", "manconcorpus", "roam", "roamAll" "roamPHE", "roamDD"}
     for data_id in eval_datasets_id.split("_"):
         if data_id in permissable_eval_ids:
             print(f"====Creating {data_id} Dataset object for evaluation only...====")
-            # TODO 1: Add tokenizer to this call
-            # TODO 2: Add truncation to this call
-            dataset = preprocess_nli_corpus_for_pytorch(data_id, SEED=SEED)
+            dataset = preprocess_nli_corpus_for_pytorch(data_id, tokenizer, truncation=truncation, SEED=SEED)
             eval_dataset_dict[data_id] = dataset['test']
             print("====...done.====")
         else:
