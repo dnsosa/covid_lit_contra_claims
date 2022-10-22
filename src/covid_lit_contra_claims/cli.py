@@ -39,19 +39,17 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 
     # Load training and evaluation datasets
-    # TODO: dict or list?
     train_dataset_dict, val_dataset_dict, test_dataset_dict = load_train_datasets(train_datasets, tokenizer,
                                                                                   truncation=truncation,
                                                                                   SEED=SEED)
-    # Two versions of CovidNLI: One where test is a separate network from train
-    # TODO: dict or list?
+
     eval_dataset_dict = load_additional_eval_datasets(eval_datasets, tokenizer,
                                                       truncation=truncation,
                                                       SEED=SEED)
 
     # Conduct any input preprocessing for various experiments
     # Note currently only using data_ratio parameter for training data, NOT val data.
-    prepared_train_dataset_dict = prepare_training_data(train_dataset_dict, train_prep_experiment, data_ratios)
+    prepared_train_dataset_dict = prepare_training_data(train_dataset_dict, train_prep_experiment, data_ratios, SEED)
 
     # Train model
     training_args = {'train_datasets': train_datasets,

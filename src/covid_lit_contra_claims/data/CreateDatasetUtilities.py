@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from itertools import combinations
 from sklearn.model_selection import train_test_split
 
-from .constants import DD_TRAIN_FRAC, DD_PH_TRAIN_FRAC, N_DD, PH_TRAIN_FRAC
+from .constants import DD_TRAIN_FRAC, DD_PH_TRAIN_FRAC, N_DD, PH_TRAIN_FRAC, ROAM_FULL_TRAIN_FRAC
 
 DRUG_LIST = ["hydroxychloroquine", " chloroquine", "tocilizumab", "remdesivir", "vitamin d", "lopinavir",
              "dexamethasone"]
@@ -31,7 +31,7 @@ def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_
     xtree = ET.parse(xml_path)  # TODO: Fix error # noqa: S314
     xroot = xtree.getroot()
 
-    manconcorpus_data = pd.DataFrame(columns=['claim', 'assertion', 'question'])
+    # manconcorpus_data = pd.DataFrame(columns=['claim', 'assertion', 'question'])
     manconcorpus_df_list = []
 
     for node in xroot:
@@ -92,8 +92,8 @@ def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_
             mancon_con_ent_df = mancon_nli_df[mancon_nli_df.label.isin(['entailment', 'contradiction'])]
             count_by_label = mancon_nli_df.groupby('label').size()
             max_non_neu = max(count_by_label['entailment'], count_by_label['contradiction'])
-            mancon_neu_down_df = mancon_nli_df[mancon_nli_df.label == 'neutral'].sample(
-                n=round(max_non_neu * neutral_frac))
+            n_neutral = round(max_non_neu * neutral_frac)
+            mancon_neu_down_df = mancon_nli_df[mancon_nli_df.label == 'neutral'].sample(n=n_neutral)
             mancon_nli_df = pd.concat([mancon_con_ent_df, mancon_neu_down_df])
 
         mancon_nli_df_dict[splits[split_i]] = mancon_nli_df.sample(frac=1, random_state=SEED)
@@ -110,17 +110,18 @@ def load_roam_full_data(roam_path: str):
     """
     roam_data = pd.read_excel(roam_path, sheet_name="Docs")
 
-    def remove_stricts(s):
-        return s.replace("STRICT_", "")
+    def process_labels(s):
+        s = s.replace("STRICT_", "")
+        return s.lower()
 
     def splitter(in_str: str, index: int):
         text = in_str.rstrip().split("\n\n")[index]
         return text
 
     roam_data = roam_data.dropna()
-    roam_data['label'] = roam_data['tags'].apply(remove_stricts)
+    roam_data['label'] = roam_data['tags'].apply(process_labels)
     # remove "question" and "duplicate" e.g.
-    roam_data = roam_data[roam_data.label.isin(["CONTRADICTION", "NEUTRAL", "ENTAILMENT"])]
+    roam_data = roam_data[roam_data.label.isin(["contradiction", "neutral", "entailment"])]
     roam_data["claim1"] = roam_data.text.transform(lambda x: splitter(x, 1))
     roam_data["claim2"] = roam_data.text.transform(lambda x: splitter(x, 3))
     return roam_data
@@ -167,13 +168,13 @@ def split_df_into_tvt_dict(df: pd.DataFrame, train_frac: float, SEED: int):
     return tvt_df_dict
 
 
-def generate_roam_full_pandas_dfs(roam_path: str, SEED: int, roam_full_train_frac: float):
+def generate_roam_full_pandas_dfs(roam_path: str, SEED: int, roam_full_train_frac: float = ROAM_FULL_TRAIN_FRAC):
     """
     Generate the full Roam dataset (without splitting into disjoint subnetworks).
 
     :param roam_path: path to Roam data
     :param SEED: random seed
-    :param roam_train_frac: fraction to be used for training
+    :param roam_full_train_frac: fraction to be used for training
     :return: dict of DataFrames of Roam annotated sentence pairs
     """
     roam_full_data = load_roam_full_data(roam_path)
@@ -203,7 +204,7 @@ def generate_roam_ph_pandas_dfs(roam_path: str, SEED: int, ph_train_frac: float 
     # Make the premise and hypothesis be identical
     roam_ph = pd.DataFrame({"sentence1": selected_claims,
                             "sentence2": selected_claims,
-                            "labels": "ENTAILMENT"})
+                            "labels": "entailment"})
     roam_ph_df_dict = split_df_into_tvt_dict(roam_ph, ph_train_frac, SEED)
 
     return roam_ph_df_dict
@@ -241,7 +242,7 @@ def generate_roam_dd_pandas_dfs(roam_path: str, SEED: int, n_dd: int = N_DD, dd_
         claim_pairs.append([claim, candidate_claim])
 
     roam_dd = pd.DataFrame(claim_pairs, columns=["sentence1", "sentence2"])
-    roam_dd["labels"] = "NEUTRAL"
+    roam_dd["labels"] = "neutral"
     roam_dd_df_dict = split_df_into_tvt_dict(roam_dd, dd_train_frac, SEED)
 
     return roam_dd_df_dict
@@ -282,7 +283,7 @@ def generate_roam_dd_ph_pandas_dfs(roam_path: str, SEED: int, dd_ph_train_frac: 
     roam_dd_ph = pd.concat([pd.DataFrame({"sentence1": roam_claims.claim, "sentence2": roam_claims.swapped_claim1}),
                             pd.DataFrame({"sentence1": roam_claims.swapped_claim2, "sentence2": roam_claims.claim})])
     roam_dd_ph = roam_dd_ph.sample(frac=1, random_state=SEED)
-    roam_dd_ph["labels"] = "NEUTRAL"
+    roam_dd_ph["labels"] = "neutral"
     roam_dd_ph_df_dict = split_df_into_tvt_dict(roam_dd_ph, dd_ph_train_frac, SEED)
 
     return roam_dd_ph_df_dict

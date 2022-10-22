@@ -4,8 +4,10 @@ Collection of functions for loading data for covid_lit_contra_claims.
 
 # -*- coding: utf-8 -*-
 
+from collections import OrderedDict
+
 from .constants import MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, MEDNLI_TRAIN_PATH, MEDNLI_DEV_PATH, \
-    MEDNLI_TEST_PATH, MANCON_XML_PATH, ROAM_SEP_PATH, ROAM_ALL_PATH
+    MEDNLI_TEST_PATH, MANCON_XML_PATH, ROAM_ALL_PATH, ROAM_SEP_PATH
 from .CreateDataset import *
 
 
@@ -17,7 +19,7 @@ def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, truncation=True, SEE
     elif corpus_id == "mednli":
         raw_dataset = create_mednli_dataset(MEDNLI_TRAIN_PATH, MEDNLI_DEV_PATH, MEDNLI_TEST_PATH)
 
-    elif corpus_id == "manconcorpus":
+    elif corpus_id == "mancon":
         raw_dataset = create_mancon_dataset(MANCON_XML_PATH, mancon_neutral_frac, mancon_train_frac, SEED=SEED)
 
     elif corpus_id == "roam":
@@ -60,11 +62,11 @@ def load_train_datasets(train_datasets_id: str, tokenizer, truncation: bool, SEE
     :param SEED: random seed
     :return: dictionaries of the created train, val, and test Datasets
     """
-    train_dataset_dict = {}
-    val_dataset_dict = {}
-    test_dataset_dict = {}
+    train_dataset_dict = OrderedDict()
+    val_dataset_dict = OrderedDict()
+    test_dataset_dict = OrderedDict()
 
-    permissable_train_ids = {"multinli", "mednli", "manconcorpus", "roam", "roamAll" "roamPHE", "roamDD", "roamDDPH"}
+    permissable_train_ids = {"multinli", "mednli", "mancon", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH"}
     for data_id in train_datasets_id.split("_"):
         if data_id in permissable_train_ids:
             print(f"====Creating {data_id} Dataset object for train/val/test...====")
@@ -89,9 +91,9 @@ def load_additional_eval_datasets(eval_datasets_id: str, tokenizer, truncation: 
     :param SEED: random seed
     :return: dictionary of the created evaluation (test) Datasets
     """
-    eval_dataset_dict = {}
+    eval_dataset_dict = OrderedDict()
 
-    permissable_eval_ids = {"multinli", "mednli", "manconcorpus", "roam", "roamAll" "roamPHE", "roamDD" "roamDDPH"}
+    permissable_eval_ids = {"multinli", "mednli", "mancon", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH"}
     for data_id in eval_datasets_id.split("_"):
         if data_id in permissable_eval_ids:
             print(f"====Creating {data_id} Dataset object for evaluation only...====")
