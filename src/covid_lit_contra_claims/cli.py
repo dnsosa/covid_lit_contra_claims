@@ -20,12 +20,13 @@ from .evaluation.Evaluation import generate_report
 @click.option('--eval_datasets', 'eval_datasets')
 @click.option('--truncation/--no-truncation', 'truncation')
 @click.option('--train_prep_experiment', 'train_prep_experiment')
+@click.option('--data_ratios', 'data_ratios', default=None)
 @click.option('--report/--no-report', 'report', default=True)
 @click.option('--learning_rate', 'learning_rate', default=1e-6)
 @click.option('--batch_size', 'batch_size', default=2)
 @click.option('--epochs', 'epochs', default=3)
 @click.option('--SEED', 'SEED', default=42)
-def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_experiment, report,
+def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_experiment, data_ratios, report,
          learning_rate, batch_size, epochs, SEED):
     """Run main function."""
 
@@ -38,16 +39,19 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 
     # Load training and evaluation datasets
+    # TODO: dict or list?
     train_dataset_dict, val_dataset_dict, test_dataset_dict = load_train_datasets(train_datasets, tokenizer,
                                                                                   truncation=truncation,
                                                                                   SEED=SEED)
     # Two versions of CovidNLI: One where test is a separate network from train
+    # TODO: dict or list?
     eval_dataset_dict = load_additional_eval_datasets(eval_datasets, tokenizer,
                                                       truncation=truncation,
                                                       SEED=SEED)
 
     # Conduct any input preprocessing for various experiments
-    prepared_train_dataset_dict = prepare_training_data(train_dataset_dict, train_prep_experiment)
+    # Note currently only using data_ratio parameter for training data, NOT val data.
+    prepared_train_dataset_dict = prepare_training_data(train_dataset_dict, train_prep_experiment, data_ratios)
 
     # Train model
     training_args = {'train_datasets': train_datasets,
@@ -55,9 +59,11 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
                      'epochs': epochs,
                      'batch_size': batch_size,
                      'learning_rate': learning_rate,
-                     'truncation': truncation}
-    trained_model = train_model(model, tokenizer, prepared_train_dataset_dict, val_dataset_dict,
-                                training_args=training_args, out_dir=out_dir, SEED=SEED)
+                     'truncation': truncation,
+                     'train_prep_experiment': train_prep_experiment,
+                     'data_ratios': data_ratios}
+    trained_model, overall_results = train_model(model, tokenizer, prepared_train_dataset_dict, val_dataset_dict,
+                                                 training_args=training_args, out_dir=out_dir, SEED=SEED)
 
     # Final report--test set statistics
     if report:

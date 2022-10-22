@@ -4,7 +4,11 @@ Collection of functions for training the models for the covid_lit_contra_claims 
 
 # -*- coding: utf-8 -*-
 
+import json
+import os
+
 import evaluate
+import numpy as np
 import torch
 import wandb
 
@@ -27,8 +31,10 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     :return: trained model
     """
 
-    # TODO: Set seed somewhere!
-    # TODO 2: out directory?
+    # Set random seeds
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
+
     # Configs and init for WandB
     additional_configs = {"mancon_neutral_frac": MANCON_NEUTRAL_FRAC,
                           "mancon_train_frac": MANCON_TRAIN_FRAC,
@@ -55,9 +61,9 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     # Train on datasets in the input training dictionary
-    for id, dataset in train_dataset_dict.items():
+    for id, train_dataset in train_dataset_dict.items():
         # TODO: Do we want shuffle = True?
-        train_dataloader = DataLoader(dataset, shuffle=False, batch_size=config['batch_size'], collate_fn=data_collator)
+        train_dataloader = DataLoader(train_dataset, shuffle=False, batch_size=config['batch_size'], collate_fn=data_collator)
         print(f"Created a DataLoader for corpus '{id}'...")
 
         # Create a learning rate scheduler
@@ -96,27 +102,52 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
         recall_metric = evaluate.load('recall', average='macro')
 
         model.eval()
-        # TODO: Create eval dataloader!!
-        # TODO 2: Implement some evaluation stuff
-        for batch_idx, batch in enumerate(eval_dataloader):
-            batch = {k: v.to(device) for k, v in batch.items()}
-            with torch.no_grad():
-                outputs = model(**batch)
+        overall_results = {}
+        # For every fine-tune step, evaluate on all validation corpora
+        for val_id, val_dataset in val_dataset_dict.items():
+            # TODO: Do we want shuffle = True?
+            val_dataloader = DataLoader(val_dataset, shuffle=False, batch_size=config['batch_size'], collate_fn=data_collator)
+            print(f"EVAL: Created a DataLoader for corpus '{val_id}'...")
 
-            logits = outputs.logits
-            predictions = torch.argmax(logits, dim=-1)
-            for metric in [acc_metric, f1_metric, precision_metric, recall_metric]:
-                metric.add_batch(predictions=predictions, references=batch["labels"])
+            for batch_idx, batch in enumerate(val_dataloader):
+                batch = {k: v.to(device) for k, v in batch.items()}
+                with torch.no_grad():
+                    outputs = model(**batch)
 
-        results = acc_metric.compute()
-        for metric in [f1_metric, precision_metric, recall_metric]:
-            results.update(metric.compute(average='macro'))
+                logits = outputs.logits
+                predictions = torch.argmax(logits, dim=-1)
+                for metric in [acc_metric, f1_metric, precision_metric, recall_metric]:
+                    metric.add_batch(predictions=predictions, references=batch["labels"])
 
-        wandb.log(results)
-        # torch.onnx.export(model, batch, "model.onnx")
-        # wandb.save("model.onnx")
+            results = acc_metric.compute()
+            for metric in [f1_metric, precision_metric, recall_metric]:
+                results.update(metric.compute(average='macro'))
 
-        print(f"Results: {results}")
-        print("Evaluation complete.")
+            wandb.log(results)
+            # torch.onnx.export(model, batch, "model.onnx")
+            # wandb.save("model.onnx")
 
-    return model
+            print(f"Results on {val_id}: {results}")
+
+            overall_results[val_id] = results
+
+        overall_results.update(config)
+        print("Overall evaluation complete.")
+
+        # Establish output directory
+        prep_args = f"PREPARGS_DR-{config['data_ratios']}_TPE-{config['train_prep_experiment']}_T-{config['truncation']}"
+        experiment_id = f"EXP_E-{config['epochs']}_B-{config['batch_size']}_LR-{config['learning_rate']}"
+        experiment_out_dir = os.path.join(out_dir,
+                                          model_id,
+                                          f"TRAIN_{config['train_datasets']}",
+                                          f"TRAIN_{config['train_datasets']}",
+                                          prep_args,
+                                          experiment_id)
+        os.makedirs(experiment_out_dir, exist_ok=True)
+
+        out_filepath = os.path.join(experiment_out_dir, "val_metrics.txt")
+        print(f"Saving results to {out_filepath} ....")
+        with open(out_filepath, 'w') as fp:
+            fp.write(json.dumps(overall_results))
+
+    return model, overall_results

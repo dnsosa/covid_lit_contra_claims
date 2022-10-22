@@ -4,7 +4,7 @@ Collection of functions for loading data for covid_lit_contra_claims.
 
 # -*- coding: utf-8 -*-
 
-from .constants import model_id_mapper, MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, MEDNLI_TRAIN_PATH, MEDNLI_DEV_PATH, \
+from .constants import MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, MEDNLI_TRAIN_PATH, MEDNLI_DEV_PATH, \
     MEDNLI_TEST_PATH, MANCON_XML_PATH, ROAM_SEP_PATH, ROAM_ALL_PATH
 from .CreateDataset import *
 
@@ -24,14 +24,16 @@ def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, truncation=True, SEE
         raw_dataset = create_roam_dataset(ROAM_SEP_PATH)
 
     elif corpus_id == "roamAll":
-        # TODO: Check this will work
-        raw_dataset = create_roam_dataset(ROAM_ALL_PATH)
+        raw_dataset = create_roam_full_dataset(ROAM_ALL_PATH, SEED=SEED)
 
-    elif corpus_id == "roamPHE":
-        raw_dataset = create_roamPHE_dataset(ROAM_SEP_PATH)
+    elif corpus_id == "roamPH":
+        raw_dataset = create_roam_ph_dataset(ROAM_ALL_PATH, SEED=SEED)
 
     elif corpus_id == "roamDD":
-        raw_dataset = create_roamDD_dataset(ROAM_SEP_PATH)
+        raw_dataset = create_roam_dd_dataset(ROAM_ALL_PATH, SEED=SEED)
+
+    elif corpus_id == "roamDDPH":
+        raw_dataset = create_roam_dd_ph_dataset(ROAM_ALL_PATH, SEED=SEED)
 
     else:
         print("Invalid corpus ID. Pre-processing failed. ")
@@ -62,7 +64,7 @@ def load_train_datasets(train_datasets_id: str, tokenizer, truncation: bool, SEE
     val_dataset_dict = {}
     test_dataset_dict = {}
 
-    permissable_train_ids = {"multinli", "mednli", "manconcorpus", "roam", "roamAll" "roamPHE", "roamDD"}
+    permissable_train_ids = {"multinli", "mednli", "manconcorpus", "roam", "roamAll" "roamPHE", "roamDD", "roamDDPH"}
     for data_id in train_datasets_id.split("_"):
         if data_id in permissable_train_ids:
             print(f"====Creating {data_id} Dataset object for train/val/test...====")
@@ -89,7 +91,7 @@ def load_additional_eval_datasets(eval_datasets_id: str, tokenizer, truncation: 
     """
     eval_dataset_dict = {}
 
-    permissable_eval_ids = {"multinli", "mednli", "manconcorpus", "roam", "roamAll" "roamPHE", "roamDD"}
+    permissable_eval_ids = {"multinli", "mednli", "manconcorpus", "roam", "roamAll" "roamPHE", "roamDD" "roamDDPH"}
     for data_id in eval_datasets_id.split("_"):
         if data_id in permissable_eval_ids:
             print(f"====Creating {data_id} Dataset object for evaluation only...====")

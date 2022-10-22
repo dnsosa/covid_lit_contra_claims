@@ -4,11 +4,17 @@ Additional utility functions for the CreateDataset script.
 
 # -*- coding: utf-8 -*-
 
+import numpy as np
 import pandas as pd
 import xml.etree.ElementTree as ET
 
 from itertools import combinations
 from sklearn.model_selection import train_test_split
+
+from .constants import DD_TRAIN_FRAC, DD_PH_TRAIN_FRAC, N_DD, PH_TRAIN_FRAC
+
+DRUG_LIST = ["hydroxychloroquine", " chloroquine", "tocilizumab", "remdesivir", "vitamin d", "lopinavir",
+             "dexamethasone"]
 
 
 def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_frac: float, SEED: int):
@@ -19,6 +25,7 @@ def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_
     :param neutral_frac: sample the neutrals to have size (neutral_frac * size_of_next_biggest_class), if None don't downsample
     :param mancon_train_frac: the fraction of questions in ManCon that should devoted to just training
     :param SEED: random seed
+    :return: ManCon
     """
 
     xtree = ET.parse(xml_path)  # TODO: Fix error # noqa: S314
@@ -36,7 +43,7 @@ def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_
     manconcorpus_data = pd.DataFrame(manconcorpus_df_list)
 
     questions = list(set(manconcorpus_data.question))
-    train_qs, valtest_qs = train_test_split(questions, test_size=( 1 -mancon_train_frac), shuffle=True, random_state=SEED)
+    train_qs, valtest_qs = train_test_split(questions, test_size=(1 -mancon_train_frac), shuffle=True, random_state=SEED)
     val_qs, test_qs = train_test_split(valtest_qs, test_size=0.5, shuffle=True, random_state=SEED)
 
     mancon_nli_df_dict = {}
@@ -92,4 +99,191 @@ def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_
         mancon_nli_df_dict[splits[split_i]] = mancon_nli_df.sample(frac=1, random_state=SEED)
 
     return mancon_nli_df_dict
+
+
+def load_roam_full_data(roam_path: str):
+    """
+    Load and preprocess full Roam dataset.
+
+    :param roam_path: path to Roam dataset
+    :return: Preprocessed DataFrame of claim pairs with labels
+    """
+    roam_data = pd.read_excel(roam_path, sheet_name="Docs")
+
+    def remove_stricts(s):
+        return s.replace("STRICT_", "")
+
+    def splitter(in_str: str, index: int):
+        text = in_str.rstrip().split("\n\n")[index]
+        return text
+
+    roam_data = roam_data.dropna()
+    roam_data['label'] = roam_data['tags'].apply(remove_stricts)
+    # remove "question" and "duplicate" e.g.
+    roam_data = roam_data[roam_data.label.isin(["CONTRADICTION", "NEUTRAL", "ENTAILMENT"])]
+    roam_data["claim1"] = roam_data.text.transform(lambda x: splitter(x, 1))
+    roam_data["claim2"] = roam_data.text.transform(lambda x: splitter(x, 3))
+    return roam_data
+
+
+def get_claims_with_drugs_df(roam_df: pd.DataFrame):
+    """
+    Return a DataFrame of every unique claim in Roam dataset with corresponding identified drug mentions.
+
+    :param roam_df: input DataFrame
+    :return: DataFrame of claims with drug mentions
+    """
+    def identify_drugs_mentioned(claim):
+        found_drugs = []
+        for drug in DRUG_LIST:
+            if drug in claim:
+                found_drugs.append(drug)
+
+        return found_drugs
+
+    roam_df["claim1_drugs"] = roam_df['claim1'].apply(identify_drugs_mentioned)
+    roam_df["claim2_drugs"] = roam_df['claim2'].apply(identify_drugs_mentioned)
+    roam_claims = pd.concat([pd.DataFrame({"claim": roam_df.claim1, "claim_drugs": roam_df.claim1_drugs}),
+                             pd.DataFrame({"claim": roam_df.claim2, "claim_drugs": roam_df.claim2_drugs})])
+
+    return roam_claims
+
+
+def split_df_into_tvt_dict(df: pd.DataFrame, train_frac: float, SEED: int):
+    """
+    Split a dataframe into train/val/test.
+
+    :param df: input DataFrame
+    :param train_frac: fraction of the DataFrame to be used for training. The rest will be split 50/50 val/test
+    :param SEED: random seed
+    :return: dictionary of DataFrames representing the 3 splits
+    """
+    train_df, valtest_df = train_test_split(df, test_size=(1 - train_frac), shuffle=True, random_state=SEED)
+    val_df, test_df = train_test_split(valtest_df, test_size=0.5, shuffle=True, random_state=SEED)
+    tvt_df_dict = {"train": train_df.reset_index(drop=True),
+                   "val": val_df.reset_index(drop=True),
+                   "test": test_df.reset_index(drop=True)}
+
+    return tvt_df_dict
+
+
+def generate_roam_full_pandas_dfs(roam_path: str, SEED: int, roam_full_train_frac: float):
+    """
+    Generate the full Roam dataset (without splitting into disjoint subnetworks).
+
+    :param roam_path: path to Roam data
+    :param SEED: random seed
+    :param roam_train_frac: fraction to be used for training
+    :return: dict of DataFrames of Roam annotated sentence pairs
+    """
+    roam_full_data = load_roam_full_data(roam_path)
+    roam_full_data = pd.DataFrame({"sentence1": roam_full_data.claim1,
+                                   "sentence2": roam_full_data.claim2,
+                                   "labels": roam_full_data.label})
+    roam_full_df_dict = split_df_into_tvt_dict(roam_full_data, roam_full_train_frac, SEED)
+
+    return roam_full_df_dict
+
+
+def generate_roam_ph_pandas_dfs(roam_path: str, SEED: int, ph_train_frac: float = PH_TRAIN_FRAC):
+    """
+    Generate the Equal Premise Hypothesis Roam DF.
+
+    :param roam_path: path to Roam data
+    :param SEED: random seed
+    :param ph_train_frac: fraction to be used for training
+    :return: dict of DataFrames of sentence pairs where the two sentences are identical = Entailment
+    """
+    roam_data = load_roam_full_data(roam_path)
+    roam_all_claims = set(roam_data.claim1).union(roam_data.claim2)
+    n_claims = len(roam_all_claims)
+    # Shuffle all the claims
+    selected_claims = np.random.choice(list(roam_all_claims), size=n_claims, replace=False)
+
+    # Make the premise and hypothesis be identical
+    roam_ph = pd.DataFrame({"sentence1": selected_claims,
+                            "sentence2": selected_claims,
+                            "labels": "ENTAILMENT"})
+    roam_ph_df_dict = split_df_into_tvt_dict(roam_ph, ph_train_frac, SEED)
+
+    return roam_ph_df_dict
+
+
+def generate_roam_dd_pandas_dfs(roam_path: str, SEED: int, n_dd: int = N_DD, dd_train_frac: float = DD_TRAIN_FRAC):
+    """
+    Generate the Different Drug Roam DF.
+
+    :param roam_path: path to Roam data
+    :param SEED: random seed
+    :param n_dd: number of samples to generate
+    :param dd_train_frac: fraction to be used for training
+    :return: dict of DataFrames of sentence pairs where the two claims have no overlapping drug mentions = Neutral
+    """
+    roam_data = load_roam_full_data(roam_path)
+    roam_claims = get_claims_with_drugs_df(roam_data)
+    roam_claims["n_drugs"] = roam_claims["claim_drugs"].apply(lambda x: len(x))
+    roam_claims["claim_drugs"] = roam_claims["claim_drugs"].apply(lambda x: tuple(x))
+    roam_claims_drugs_dict = dict(zip(roam_claims.claim, roam_claims.claim_drugs))
+
+    # Select a sample of single claims (with replacement). For each claim, naively sample another claim until
+    # a pair is found where there's no drug in common
+    all_claims = list(roam_claims_drugs_dict.keys())
+    first_claims = np.random.choice(all_claims, size=n_dd, replace=True)  # TODO: make sure seed is set
+    claim_pairs = []
+    for claim in first_claims:
+        claim_drugs = set(roam_claims_drugs_dict[claim])
+        found_compatible_claim = False
+        while not found_compatible_claim:
+            candidate_claim = np.random.choice(all_claims)
+            candidate_claim_drugs = set(roam_claims_drugs_dict[candidate_claim])
+            if len(claim_drugs.intersection(candidate_claim_drugs)) == 0:
+                found_compatible_claim = True
+        claim_pairs.append([claim, candidate_claim])
+
+    roam_dd = pd.DataFrame(claim_pairs, columns=["sentence1", "sentence2"])
+    roam_dd["labels"] = "NEUTRAL"
+    roam_dd_df_dict = split_df_into_tvt_dict(roam_dd, dd_train_frac, SEED)
+
+    return roam_dd_df_dict
+
+
+def generate_roam_dd_ph_pandas_dfs(roam_path: str, SEED: int, dd_ph_train_frac: float = DD_PH_TRAIN_FRAC):
+    """
+    Generate the Different Drug-Equal Premise Hypothesis Roam DF.
+
+    :param roam_path: path to Roam data
+    :param SEED: random seed
+    :param dd_ph_train_frac: fraction to be used for training
+    :return: dict of DataFrames of sent. pairs that are identical except for the (single) drug mention = Neutral
+    """
+    roam_data = load_roam_full_data(roam_path)
+    roam_claims = get_claims_with_drugs_df(roam_data)
+
+    # Swap drugs of claims about a single drug
+    roam_claims["n_drugs"] = roam_claims["claim_drugs"].apply(lambda x: len(x))
+    roam_claims["claim_drugs"] = roam_claims["claim_drugs"].apply(lambda x: tuple(x))
+    roam_claims = roam_claims[roam_claims.n_drugs == 1].drop_duplicates()
+
+    def drug_swap(row):
+        c_drug = row["claim_drugs"][0].strip()
+        other_drugs = [drug for drug in DRUG_LIST if drug != c_drug]
+        new_drug = np.random.choice(other_drugs)
+
+        return row["claim"].replace(c_drug, new_drug)
+
+    roam_claims["swapped_claim1"] = roam_claims.apply(drug_swap, axis=1)
+    roam_claims["swapped_claim2"] = roam_claims.apply(drug_swap, axis=1)
+
+    # TODO: Thought,...
+    # TODO: On multiple drugs mentioned at the same time. What would the swap procedure be?
+    # TODO: Replace the names of all the drugs with the resampled drug (or drugs?)?
+
+    # Mixing up the original and perturbed sentences so the original isn't always the premise
+    roam_dd_ph = pd.concat([pd.DataFrame({"sentence1": roam_claims.claim, "sentence2": roam_claims.swapped_claim1}),
+                            pd.DataFrame({"sentence1": roam_claims.swapped_claim2, "sentence2": roam_claims.claim})])
+    roam_dd_ph = roam_dd_ph.sample(frac=1, random_state=SEED)
+    roam_dd_ph["labels"] = "NEUTRAL"
+    roam_dd_ph_df_dict = split_df_into_tvt_dict(roam_dd_ph, dd_ph_train_frac, SEED)
+
+    return roam_dd_ph_df_dict
 
