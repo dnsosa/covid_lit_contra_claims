@@ -43,9 +43,10 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     wandb.init(project='COVID Drug Contra Claims', config=config)
     print("WandB initialized.")
 
-    # Load the model
+    # Load the model, initialize the optimizer
     checkpoint = model_id_mapper[model_id]
     model = AutoModelForSequenceClassification.from_pretrained(checkpoint, num_labels=3)
+    optimizer = AdamW(model.parameters(), lr=config['learning_rate'])
     wandb.watch(model, log_freq=WANDB_LOG_FREQ)
     print("Model loaded.")
 
@@ -53,9 +54,6 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model.to(device)
     print(f"Using device {device}.")
-
-    # Initialize optimizer
-    optimizer = AdamW(model.parameters(), lr=config['learning_rate'])
 
     # Create data collator
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
