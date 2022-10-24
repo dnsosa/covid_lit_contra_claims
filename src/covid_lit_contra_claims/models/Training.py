@@ -39,7 +39,8 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     additional_configs = {"mancon_neutral_frac": MANCON_NEUTRAL_FRAC,
                           "mancon_train_frac": MANCON_TRAIN_FRAC,
                           "wandb_log_interval": WANDB_LOG_INTERVAL}
-    config = training_args.update(additional_configs)
+
+    config = dict(training_args, **additional_configs)  # Merge the dicts
     wandb.init(project='COVID Drug Contra Claims', config=config)
     print("WandB initialized.")
 
