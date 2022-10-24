@@ -66,7 +66,7 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
         print(f"Created a DataLoader for corpus '{id}'...")
 
         # Create a learning rate scheduler
-        num_training_steps = config['num_epochs'] * len(train_dataloader)
+        num_training_steps = config['epochs'] * len(train_dataloader)
         lr_scheduler = get_scheduler(
             "linear",
             optimizer=optimizer,
@@ -76,10 +76,10 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
         print(f"Created a learning rate scheduler for corpus '{id}'...")
 
         print("Beginning training...")
-        print(f"# Epochs: {config['num_epochs']}")
+        print(f"# Epochs: {config['epochs']}")
         model.train()
 
-        for epoch in range(config['num_epochs']):
+        for epoch in range(config['epochs']):
             for batch_idx, batch in enumerate(train_dataloader):
                 batch = {k: v.to(device) for k, v in batch.items()}
                 outputs = model(**batch)
