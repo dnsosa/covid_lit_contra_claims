@@ -139,7 +139,7 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
         experiment_out_dir = os.path.join(out_dir,
                                           model_id,
                                           f"TRAIN_{config['train_datasets']}",
-                                          f"TRAIN_{config['train_datasets']}",
+                                          f"VAL_{config['eval_datasets']}",
                                           prep_args,
                                           experiment_id)
         os.makedirs(experiment_out_dir, exist_ok=True)
