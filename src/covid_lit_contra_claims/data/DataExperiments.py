@@ -35,7 +35,7 @@ def resize_dataset_with_data_ratio(dataset_dict: OrderedDict, data_ratios: float
         # Calculate the number of samples we want from each of the big datasets
         for big_dataset_name in big_dataset_names:
             if big_dataset_name in dataset_dict:
-                big_dataset_proposed_size = smallest_dataset_size * data_ratios ** ratio_multiplier
+                big_dataset_proposed_size = smallest_dataset_size * float(data_ratios) ** ratio_multiplier
                 big_dataset_size = min(int(big_dataset_proposed_size), dataset_dict[big_dataset_name].num_rows)
                 # Downsample the dataset accordingly
                 big_dataset = dataset_dict[big_dataset_name]
