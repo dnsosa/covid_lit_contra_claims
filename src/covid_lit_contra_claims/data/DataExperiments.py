@@ -46,6 +46,8 @@ def resize_dataset_with_data_ratio(dataset_dict: OrderedDict, data_ratios: float
                 dataset_dict[big_dataset_name] = big_dataset.select(range(big_dataset_size))
                 ratio_multiplier -= 1
 
+    return dataset_dict
+
 
 def prepare_training_data(train_dataset_dict: OrderedDict, train_prep_experiment: str, SEED: int):
     """
