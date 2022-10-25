@@ -38,7 +38,8 @@ def prepare_training_data(train_dataset_dict: OrderedDict, train_prep_experiment
                 big_dataset_count = min(int(big_dataset_proposed_count), train_dataset_dict[big_dataset_name].num_rows)
                 # Downsample the dataset accordingly
                 big_dataset = train_dataset_dict[big_dataset_name]
-                train_dataset_dict[big_dataset_name] = big_dataset.shuffle(seed=SEED).select(range(big_dataset_count))
+                # train_dataset_dict[big_dataset_name] = big_dataset.shuffle(seed=SEED).select(range(big_dataset_count))
+                train_dataset_dict[big_dataset_name] = big_dataset.select(range(big_dataset_count))
                 ratio_multiplier -= 1
 
     # Now perturb the order based on the train_prep_experiment argument
