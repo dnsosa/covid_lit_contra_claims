@@ -16,7 +16,7 @@ def prepare_training_data(train_dataset_dict: OrderedDict, train_prep_experiment
     Preprocess input list of training data depending on the experimental procedure declared
 
     :param train_dataset_dict: list of HF Datasets to be used as training
-    :param train_prep_experiment: type of experiment requested, can be {"sequential", "combined"}
+    :param train_prep_experiment: type of experiment requested, can be {"sequential", "combined", "shuffled"}
     :param SEED: random seed
     :param data_ratios: indicates the ratio of training data from one corpus to the other
     :return: prepared_train_dataset_list: list of HF Datasets to be used for training after the perturbation
