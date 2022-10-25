@@ -107,7 +107,7 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
         f1_metric = evaluate.load('f1', average='macro')
         precision_metric = evaluate.load('precision', average='macro')
         recall_metric = evaluate.load('recall', average='macro')
-        #recall_metric_2 = evaluate.load('recall')
+        recall_metric2 = evaluate.load('recall')
 
         model.eval()
         overall_results = {}
@@ -129,12 +129,14 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
 
                 logits = outputs.logits
                 predictions = torch.argmax(logits, dim=-1)
-                for metric in [acc_metric, f1_metric, precision_metric, recall_metric]:
+                for metric in [acc_metric, f1_metric, precision_metric, recall_metric, recall_metric2]:
                     metric.add_batch(predictions=predictions, references=batch["labels"])
 
-            results = acc_metric.compute()
+            results = acc_metric.compute()  # Creates a dictionary
             for metric in [f1_metric, precision_metric, recall_metric]:
-                results.update(metric.compute(average='macro'))
+                results.update(metric.compute(average='macro'))  # Add these to the dict
+            recall_con_val = recall_metric2.compute()['recall'][2]  # 2 == contradictions index
+            results.update({'recall_con': recall_con_val})
 
             wandb.log(results)
             # torch.onnx.export(model, batch, "model.onnx")
