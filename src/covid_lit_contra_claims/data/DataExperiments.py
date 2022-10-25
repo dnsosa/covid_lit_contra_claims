@@ -10,37 +10,54 @@ from collections import OrderedDict
 from datasets import concatenate_datasets
 
 
-def prepare_training_data(train_dataset_dict: OrderedDict, train_prep_experiment: str, SEED: int,
-                          data_ratios: float = None):
+def resize_dataset_with_data_ratio(dataset_dict: OrderedDict, data_ratios: float, is_train: bool, SEED: int):
     """
-    Preprocess input list of training data depending on the experimental procedure declared
+    Sample data from ["multi", "med", "mancon"] based on the desired ratio of sizes from one to another.
 
-    :param train_dataset_dict: list of HF Datasets to be used as training
-    :param train_prep_experiment: type of experiment requested, can be {"sequential", "combined", "shuffled"}
-    :param SEED: random seed
+    :param dataset_dict: dict of HF Datasets to be used in training
     :param data_ratios: indicates the ratio of training data from one corpus to the other
-    :return: prepared_train_dataset_list: list of HF Datasets to be used for training after the perturbation
+    :param tv_flag: is it the training dataset collection? Else, assume it's val
+    :param SEED: random seed
+    :return: dict of HF Datasets that has been subsampled based on data_ratios
     """
 
     random.seed(SEED)
+
+    # Using 500 = approx the size of the Roam disjoint training, 100 for val
+    smallest_dataset_size = 500 if is_train else 100
 
     # Adjust the proportions of the input training datasets based on the data_ratios before perturbing order
     if data_ratios is not None:
         big_dataset_names = ["multinli", "mednli", "mancon"]
         # Number of times to apply the multiplier
-        ratio_multiplier = len(set(big_dataset_names).intersection(train_dataset_dict.keys()))
+        ratio_multiplier = len(set(big_dataset_names).intersection(dataset_dict.keys()))
 
         # Calculate the number of samples we want from each of the big datasets
         for big_dataset_name in big_dataset_names:
-            if big_dataset_name in train_dataset_dict:
-                # Using 500 = approx the size of the Roam disjoint training
-                big_dataset_proposed_count = 500 * data_ratios ** ratio_multiplier
-                big_dataset_count = min(int(big_dataset_proposed_count), train_dataset_dict[big_dataset_name].num_rows)
+            if big_dataset_name in dataset_dict:
+                big_dataset_proposed_size = smallest_dataset_size * data_ratios ** ratio_multiplier
+                big_dataset_size = min(int(big_dataset_proposed_size), dataset_dict[big_dataset_name].num_rows)
                 # Downsample the dataset accordingly
-                big_dataset = train_dataset_dict[big_dataset_name]
+                big_dataset = dataset_dict[big_dataset_name]
+                # TODO: fix... this didn't work previously, something about random seeds needing to be ints
                 # train_dataset_dict[big_dataset_name] = big_dataset.shuffle(seed=SEED).select(range(big_dataset_count))
-                train_dataset_dict[big_dataset_name] = big_dataset.select(range(big_dataset_count))
+                print(f"seed for shuffling before adjusting ratio is {SEED}, which is a(n) {type(SEED)}")
+                big_dataset = big_dataset.shuffle(seed=SEED)
+                dataset_dict[big_dataset_name] = big_dataset.select(range(big_dataset_size))
                 ratio_multiplier -= 1
+
+
+def prepare_training_data(train_dataset_dict: OrderedDict, train_prep_experiment: str, SEED: int):
+    """
+    Preprocess input list of training data depending on the experimental procedure declared.
+
+    :param train_dataset_dict: dict of HF Datasets to be used as training
+    :param train_prep_experiment: type of experiment requested, can be {"sequential", "combined", "shuffled"}
+    :param SEED: random seed
+    :return: prepared_train_dataset_list: list of HF Datasets to be used for training after the perturbation
+    """
+
+    random.seed(SEED)
 
     # Now perturb the order based on the train_prep_experiment argument
     if train_prep_experiment == "combined":

@@ -17,6 +17,9 @@ from ..data.constants import model_id_mapper, MANCON_NEUTRAL_FRAC, MANCON_TRAIN_
 from torch.utils.data import DataLoader
 from transformers import AdamW, AutoModelForSequenceClassification, DataCollatorWithPadding, get_scheduler
 
+# Use TF32 instead of FP32 -- decrease precision in a non-impactful way for a speed up
+torch.backends.cuda.matmul.allow_tf32 = True
+
 
 def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, training_args, out_dir, SEED):
     """
@@ -62,7 +65,12 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     # Train on datasets in the input training dictionary
     for id, train_dataset in train_dataset_dict.items():
         # TODO: Do we want shuffle = True?
-        train_dataloader = DataLoader(train_dataset, shuffle=False, batch_size=config['batch_size'], collate_fn=data_collator)
+        train_dataloader = DataLoader(train_dataset,
+                                      shuffle=False,
+                                      batch_size=config['batch_size'],
+                                      collate_fn=data_collator,
+                                      num_workers=4,  # speed up
+                                      pin_memory=True)  # speed up
         print(f"Created a DataLoader for corpus '{id}'...")
 
         # Create a learning rate scheduler
@@ -99,13 +107,19 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
         f1_metric = evaluate.load('f1', average='macro')
         precision_metric = evaluate.load('precision', average='macro')
         recall_metric = evaluate.load('recall', average='macro')
+        #recall_metric_2 = evaluate.load('recall')
 
         model.eval()
         overall_results = {}
         # For every fine-tune step, evaluate on all validation corpora
         for val_id, val_dataset in val_dataset_dict.items():
             # TODO: Do we want shuffle = True?
-            val_dataloader = DataLoader(val_dataset, shuffle=False, batch_size=config['batch_size'], collate_fn=data_collator)
+            val_dataloader = DataLoader(val_dataset,
+                                        shuffle=False,
+                                        batch_size=config['batch_size'],
+                                        collate_fn=data_collator,
+                                        num_workers=4,  # speed up
+                                        pin_memory=True)  # speed up
             print(f"EVAL: Created a DataLoader for corpus '{val_id}'...")
 
             for batch_idx, batch in enumerate(val_dataloader):

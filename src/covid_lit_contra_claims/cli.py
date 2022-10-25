@@ -8,7 +8,7 @@ from transformers import AutoTokenizer
 
 from .data.constants import model_id_mapper
 from .data.DataLoader import load_train_datasets, load_additional_eval_datasets
-from .data.DataExperiments import prepare_training_data
+from .data.DataExperiments import prepare_training_data, resize_dataset_with_data_ratio
 from .models.Training import train_model
 from .evaluation.Evaluation import generate_report
 
@@ -49,7 +49,15 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
 
     # Conduct any input preprocessing for various experiments
     # Note currently only using data_ratio parameter for training data, NOT val data.
-    prepared_train_dataset_dict = prepare_training_data(train_dataset_dict, train_prep_experiment, data_ratios, SEED)
+    ratio_adjusted_train_dataset_dict = resize_dataset_with_data_ratio(train_dataset_dict, data_ratios,
+                                                                       is_train=True,
+                                                                       SEED=SEED)
+    ratio_adjusted_val_dataset_dict = resize_dataset_with_data_ratio(val_dataset_dict, data_ratios,
+                                                                     is_train=False,
+                                                                     SEED=SEED)
+    prepared_train_dataset_dict = prepare_training_data(ratio_adjusted_train_dataset_dict,
+                                                        train_prep_experiment,
+                                                        SEED)
 
     # Train model
     training_args = {'train_datasets': train_datasets,
@@ -60,8 +68,13 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
                      'truncation': truncation,
                      'train_prep_experiment': train_prep_experiment,
                      'data_ratios': data_ratios}
-    trained_model, overall_results = train_model(model, tokenizer, prepared_train_dataset_dict, val_dataset_dict,
-                                                 training_args=training_args, out_dir=out_dir, SEED=SEED)
+    trained_model, overall_results = train_model(model,
+                                                 tokenizer,
+                                                 prepared_train_dataset_dict,
+                                                 ratio_adjusted_val_dataset_dict,
+                                                 training_args=training_args,
+                                                 out_dir=out_dir,
+                                                 SEED=SEED)
 
     # Final report--test set statistics
     if report:
