@@ -107,7 +107,7 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
         f1_metric = evaluate.load('f1', average='macro')
         precision_metric = evaluate.load('precision', average='macro')
         recall_metric = evaluate.load('recall', average='macro')
-        recall_metric2 = evaluate.load('recall')
+        recall_metric2 = evaluate.load('recall', average=None)
 
         model.eval()
         overall_results = {}
