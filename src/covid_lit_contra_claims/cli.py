@@ -49,10 +49,12 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
 
     # Conduct any input preprocessing for various experiments
     # Note currently only using data_ratio parameter for training data, NOT val data.
-    ratio_adjusted_train_dataset_dict = resize_dataset_with_data_ratio(train_dataset_dict, data_ratios,
+    ratio_adjusted_train_dataset_dict = resize_dataset_with_data_ratio(train_dataset_dict,
+                                                                       data_ratios=data_ratios,
                                                                        is_train=True,
                                                                        SEED=SEED)
-    ratio_adjusted_val_dataset_dict = resize_dataset_with_data_ratio(val_dataset_dict, data_ratios,
+    ratio_adjusted_val_dataset_dict = resize_dataset_with_data_ratio(val_dataset_dict,
+                                                                     data_ratios=data_ratios,
                                                                      is_train=False,
                                                                      SEED=SEED)
     prepared_train_dataset_dict = prepare_training_data(ratio_adjusted_train_dataset_dict,
