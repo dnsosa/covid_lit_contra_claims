@@ -145,7 +145,12 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
             results = acc_metric.compute()  # Creates a dictionary
             for metric in [f1_metric, precision_metric, recall_metric]:
                 results.update(metric.compute(average='macro'))  # Add these to the dict
-            recall_con_val = recall_metric2.compute(average=None)['recall'][2]  # 2 == contradictions index
+
+            # Calculate recall of just contradictions class
+            if val_id in ["roamPH", "roamDD", "roamDDPH"]:
+                recall_con_val = -1  # Flag for recall con is undefined here
+            else:
+                recall_con_val = recall_metric2.compute(average=None)['recall'][2]  # 2 == contradictions index
             results.update({'recall_con': recall_con_val})
 
             # format the name of the result a bit
