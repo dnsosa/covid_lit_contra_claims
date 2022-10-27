@@ -27,7 +27,7 @@ from .evaluation.Evaluation import generate_report
 @click.option('--batch_size', 'batch_size', default=2)
 @click.option('--epochs', 'epochs', default=3)
 @click.option('--SEED', 'SEED', default=42)
-def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datsets, truncation, train_prep_experiment, data_ratios, report,
+def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets, truncation, train_prep_experiment, data_ratios, report,
          learning_rate, batch_size, epochs, SEED):
     """Run main function."""
 
@@ -55,8 +55,8 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datsets,
                                                                  SEED=SEED)
 
     # Optionally load more test datasets
-    if additional_eval_datsets is not None:
-        additional_eval_dataset_dict = load_additional_eval_datasets(additional_eval_datsets, tokenizer,
+    if additional_eval_datasets is not None:
+        additional_eval_dataset_dict = load_additional_eval_datasets(additional_eval_datasets, tokenizer,
                                                                      truncation=truncation,
                                                                      SEED=SEED)
         test_dataset_dict.update(additional_eval_dataset_dict)
