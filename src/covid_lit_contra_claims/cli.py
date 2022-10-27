@@ -18,6 +18,7 @@ from .evaluation.Evaluation import generate_report
 @click.option('--model', 'model')
 @click.option('--train_datasets', 'train_datasets')
 @click.option('--eval_datasets', 'eval_datasets')
+@click.option('--additional_eval_datasets', 'additional_eval_datasets', default=None)
 @click.option('--truncation/--no-truncation', 'truncation', default=True)
 @click.option('--train_prep_experiment', 'train_prep_experiment', default="sequential")
 @click.option('--data_ratios', 'data_ratios', default=None)
@@ -26,9 +27,12 @@ from .evaluation.Evaluation import generate_report
 @click.option('--batch_size', 'batch_size', default=2)
 @click.option('--epochs', 'epochs', default=3)
 @click.option('--SEED', 'SEED', default=42)
-def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_experiment, data_ratios, report,
+def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datsets, truncation, train_prep_experiment, data_ratios, report,
          learning_rate, batch_size, epochs, SEED):
     """Run main function."""
+
+    # LOAD TOKENIZER
+    ################
 
     if model not in model_id_mapper.keys():
         print(f"Model: '{model}' not a valid transformers model! Must be in: {model_id_mapper.keys()}")
@@ -38,14 +42,27 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
     checkpoint = model_id_mapper[model]
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 
-    # Load training and evaluation datasets
-    train_dataset_dict, val_dataset_dict, test_dataset_dict = load_train_datasets(train_datasets, tokenizer,
-                                                                                  truncation=truncation,
-                                                                                  SEED=SEED)
+    # LOAD DATA
+    ############
 
-    eval_dataset_dict = load_additional_eval_datasets(eval_datasets, tokenizer,
-                                                      truncation=truncation,
-                                                      SEED=SEED)
+    # Load training datasets
+    train_dataset_dict, _, _ = load_train_datasets(train_datasets, tokenizer,
+                                                   truncation=truncation,
+                                                   SEED=SEED)
+    # Load val and test datasets
+    _, val_dataset_dict, test_dataset_dict = load_train_datasets(eval_datasets, tokenizer,
+                                                                 truncation=truncation,
+                                                                 SEED=SEED)
+
+    # Optionally load more test datasets
+    if additional_eval_datsets is not None:
+        additional_eval_dataset_dict = load_additional_eval_datasets(additional_eval_datsets, tokenizer,
+                                                                     truncation=truncation,
+                                                                     SEED=SEED)
+        test_dataset_dict.update(additional_eval_dataset_dict)
+
+    # PERTURB DATA
+    ################
 
     # Conduct any input preprocessing for various experiments
     # Note currently only using data_ratio parameter for training data, NOT val data.
@@ -61,7 +78,9 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
                                                         train_prep_experiment,
                                                         SEED)
 
-    # Train model
+    # TRAIN MODEL
+    #############
+
     training_args = {'train_datasets': train_datasets,
                      'eval_datasets': eval_datasets,
                      'epochs': epochs,
@@ -79,10 +98,12 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
                                                  out_dir=out_dir,
                                                  SEED=SEED)
 
-    # Final report--test set statistics
+    # OPTIONAL: FINAL REPORT
+    ########################
+    # Based on test set statistics
     if report:
         results_summary = generate_report(trained_model,
-                                          test_dataset_dict.update(eval_dataset_dict),
+                                          test_dataset_dict,
                                           out_dir=out_dir)
         print(f"Summary of training: {results_summary}")
 
