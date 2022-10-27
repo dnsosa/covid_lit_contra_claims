@@ -65,9 +65,10 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
 
     # Train on datasets in the input training dictionary
     overall_results = []
-    training_list_so_far = []
-    for id, train_dataset in train_dataset_dict.items():
-        training_list_so_far.append(id)
+    training_list_so_far = ["none"]
+    for train_id, train_dataset in train_dataset_dict.items():
+        training_list_so_far.append(train_id)
+        trainings_so_far = "_".join(training_list_so_far[:-1])
         # TODO: Do we want shuffle = True?
         train_dataloader = DataLoader(train_dataset,
                                       shuffle=False,
@@ -75,7 +76,7 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
                                       collate_fn=data_collator,
                                       num_workers=4,  # speed up
                                       pin_memory=True)  # speed up
-        print(f"Created a DataLoader for corpus '{id}'...")
+        print(f"Created a DataLoader for corpus '{train_id}'...")
 
         # Create a learning rate scheduler
         num_training_steps = config['epochs'] * len(train_dataloader)
@@ -85,7 +86,7 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
             num_warmup_steps=0,
             num_training_steps=num_training_steps,
         )
-        print(f"Created a learning rate scheduler for corpus '{id}'...")
+        print(f"Created a learning rate scheduler for corpus '{train_id}'...")
 
         print("Beginning training...")
         print(f"# Epochs: {config['epochs']}")
@@ -104,10 +105,9 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
 
                 if batch_idx % config['wandb_log_interval'] == 0:
                     # Identifier for all trainings up to this one
-                    trainings_so_far = "_".join(training_list_so_far[:-1])
-                    wandb.log({"epoch": epoch, f"Training Loss on {id} (prev: {trainings_so_far})": loss})
+                    wandb.log({"epoch": epoch, f"Training Loss on {train_id} (prev: {trainings_so_far})": loss})
 
-        print(f"Training complete for corpus '{id}'.")
+        print(f"Training complete for corpus '{train_id}'.")
         print("Beginning evaluation...")
         acc_metric = evaluate.load('accuracy')
         f1_metric = evaluate.load('f1', average='macro')
