@@ -9,6 +9,7 @@ import os
 
 import evaluate
 import numpy as np
+import pandas as pd
 import torch
 import wandb
 
@@ -63,7 +64,10 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     # Train on datasets in the input training dictionary
+    overall_results = []
+    training_list_so_far = []
     for id, train_dataset in train_dataset_dict.items():
+        training_list_so_far.append(id)
         # TODO: Do we want shuffle = True?
         train_dataloader = DataLoader(train_dataset,
                                       shuffle=False,
@@ -99,7 +103,9 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
                 optimizer.zero_grad()
 
                 if batch_idx % config['wandb_log_interval'] == 0:
-                    wandb.log({"epoch": epoch, "training_loss": loss})
+                    # Identifier for all trainings up to this one
+                    trainings_so_far = "_".join(training_list_so_far[:-1])
+                    wandb.log({"epoch": epoch, f"Training Loss on {id} (prev: {trainings_so_far})": loss})
 
         print(f"Training complete for corpus '{id}'.")
         print("Beginning evaluation...")
@@ -110,7 +116,7 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
         recall_metric2 = evaluate.load('recall', average=None)
 
         model.eval()
-        overall_results = {}
+        trainings_so_far = "_".join(training_list_so_far)
         # For every fine-tune step, evaluate on all validation corpora
         for val_id, val_dataset in val_dataset_dict.items():
             # TODO: Do we want shuffle = True?
@@ -126,6 +132,10 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
                 batch = {k: v.to(device) for k, v in batch.items()}
                 with torch.no_grad():
                     outputs = model(**batch)
+                    val_loss = outputs.loss
+
+                    if batch_idx % config['wandb_log_interval'] == 0:
+                        wandb.log({f"Val Loss on {val_id} (trained: {trainings_so_far})": val_loss})
 
                 logits = outputs.logits
                 predictions = torch.argmax(logits, dim=-1)
@@ -138,31 +148,35 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
             recall_con_val = recall_metric2.compute(average=None)['recall'][2]  # 2 == contradictions index
             results.update({'recall_con': recall_con_val})
 
-            wandb.log(results)
+            # format the name of the result a bit
+            wandb_results = {f"Val: {val_id.upper()} {k.capitalize()}": v for k, v in results.items()}
+            wandb.log(wandb_results)
             # torch.onnx.export(model, batch, "model.onnx")
             # wandb.save("model.onnx")
 
+            results["Cumulative Training"] = trainings_so_far
+            results["Validation Set"] = val_id
+            results.update(config)
+
             print(f"Results on {val_id}: {results}")
+            overall_results.append(results)
 
-            overall_results[val_id] = results
+    print("Overall evaluation complete.")
 
-        overall_results.update(config)
-        print("Overall evaluation complete.")
+    # Establish output directory
+    prep_args = f"PREPARGS_DR-{config['data_ratios']}_TPE-{config['train_prep_experiment']}_T-{config['truncation']}"
+    experiment_id = f"EXP_E-{config['epochs']}_B-{config['batch_size']}_LR-{config['learning_rate']}"
+    experiment_out_dir = os.path.join(out_dir,
+                                      model_id,
+                                      f"TRAIN_{config['train_datasets']}",
+                                      f"VAL_{config['eval_datasets']}",
+                                      prep_args,
+                                      experiment_id)
+    os.makedirs(experiment_out_dir, exist_ok=True)
 
-        # Establish output directory
-        prep_args = f"PREPARGS_DR-{config['data_ratios']}_TPE-{config['train_prep_experiment']}_T-{config['truncation']}"
-        experiment_id = f"EXP_E-{config['epochs']}_B-{config['batch_size']}_LR-{config['learning_rate']}"
-        experiment_out_dir = os.path.join(out_dir,
-                                          model_id,
-                                          f"TRAIN_{config['train_datasets']}",
-                                          f"VAL_{config['eval_datasets']}",
-                                          prep_args,
-                                          experiment_id)
-        os.makedirs(experiment_out_dir, exist_ok=True)
+    out_filepath = os.path.join(experiment_out_dir, "val_metrics.csv")
+    print(f"Saving results to {out_filepath} ....")
+    overall_results_df = pd.DataFrame(overall_results)
+    overall_results_df.to_csv(out_filepath, index=False)
 
-        out_filepath = os.path.join(experiment_out_dir, "val_metrics.txt")
-        print(f"Saving results to {out_filepath} ....")
-        with open(out_filepath, 'w') as fp:
-            fp.write(json.dumps(overall_results))
-
-    return model, overall_results
+    return model, overall_results_df

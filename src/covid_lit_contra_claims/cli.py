@@ -69,7 +69,8 @@ def main(out_dir, model, train_datasets, eval_datasets, truncation, train_prep_e
                      'learning_rate': learning_rate,
                      'truncation': truncation,
                      'train_prep_experiment': train_prep_experiment,
-                     'data_ratios': data_ratios}
+                     'data_ratios': data_ratios,
+                     'SEED': SEED}
     trained_model, overall_results = train_model(model,
                                                  tokenizer,
                                                  prepared_train_dataset_dict,
