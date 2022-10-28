@@ -22,7 +22,7 @@ from .evaluation.Evaluation import generate_report
 @click.option('--truncation/--no-truncation', 'truncation', default=True)
 @click.option('--train_prep_experiment', 'train_prep_experiment', default="sequential")
 @click.option('--data_ratios', 'data_ratios', default=None)
-@click.option('--speed/--no-speed', 'try_speed', default=False)
+@click.option('--speed/--no-speed', 'try_speed', default=True)
 @click.option('--report/--no-report', 'report', default=False)
 @click.option('--learning_rate', 'learning_rate', default=1e-6)
 @click.option('--batch_size', 'batch_size', default=2)
