@@ -22,13 +22,14 @@ from .evaluation.Evaluation import generate_report
 @click.option('--truncation/--no-truncation', 'truncation', default=True)
 @click.option('--train_prep_experiment', 'train_prep_experiment', default="sequential")
 @click.option('--data_ratios', 'data_ratios', default=None)
+@click.option('--speed/--no-speed', 'try_speed', default=False)
 @click.option('--report/--no-report', 'report', default=False)
 @click.option('--learning_rate', 'learning_rate', default=1e-6)
 @click.option('--batch_size', 'batch_size', default=2)
 @click.option('--epochs', 'epochs', default=3)
 @click.option('--SEED', 'SEED', default=42)
-def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets, truncation, train_prep_experiment, data_ratios, report,
-         learning_rate, batch_size, epochs, SEED):
+def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets, truncation, train_prep_experiment,
+         data_ratios, try_speed, report, learning_rate, batch_size, epochs, SEED):
     """Run main function."""
 
     # LOAD TOKENIZER
@@ -96,6 +97,7 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
                                                  prepared_train_dataset_dict,
                                                  ratio_adjusted_val_dataset_dict,
                                                  training_args=training_args,
+                                                 try_speed=try_speed,
                                                  out_dir=out_dir,
                                                  SEED=SEED)
 

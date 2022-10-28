@@ -22,7 +22,7 @@ from transformers import AdamW, AutoModelForSequenceClassification, DataCollator
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
-def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, training_args, out_dir, SEED):
+def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, training_args, try_speed, out_dir, SEED):
     """
     Main function for training the HF model.
 
@@ -66,6 +66,7 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     # Train on datasets in the input training dictionary
     overall_results = []
     training_list_so_far = ["none"]
+    num_workers = 4 if try_speed else 0
     for train_id, train_dataset in train_dataset_dict.items():
         training_list_so_far.append(train_id)
         trainings_so_far = "_".join(training_list_so_far[:-1])
@@ -74,8 +75,8 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
                                       shuffle=False,
                                       batch_size=config['batch_size'],
                                       collate_fn=data_collator,
-                                      num_workers=4,  # speed up
-                                      pin_memory=True)  # speed up
+                                      num_workers=num_workers,  # speed up
+                                      pin_memory=try_speed)  # speed up
         print(f"Created a DataLoader for corpus '{train_id}'...")
 
         # Create a learning rate scheduler
@@ -123,9 +124,9 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
             val_dataloader = DataLoader(val_dataset,
                                         shuffle=False,
                                         batch_size=config['batch_size'],
-                                        collate_fn=data_collator,
-                                        num_workers=4,  # speed up
-                                        pin_memory=True)  # speed up
+                                        collate_fn=data_collator)#,
+                                        ##num_workers=4,  # speed up
+                                        ##pin_memory=True)  # speed up
             print(f"EVAL: Created a DataLoader for corpus '{val_id}'...")
 
             for batch_idx, batch in enumerate(val_dataloader):
