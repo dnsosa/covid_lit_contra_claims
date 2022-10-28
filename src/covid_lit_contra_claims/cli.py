@@ -83,6 +83,7 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
 
     training_args = {'train_datasets': train_datasets,
                      'eval_datasets': eval_datasets,
+                     'model': model,
                      'epochs': epochs,
                      'batch_size': batch_size,
                      'learning_rate': learning_rate,
