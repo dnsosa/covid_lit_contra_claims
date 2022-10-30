@@ -30,6 +30,7 @@ def resize_dataset_with_data_ratio(dataset_dict: OrderedDict, data_ratios: float
     if data_ratios is not None:
         big_dataset_names = ["multinli", "mednli", "mancon"]
         # Number of times to apply the multiplier
+        # TODO: Check if I didn't need to make that a set too.....
         ratio_multiplier = len(set(big_dataset_names).intersection(dataset_dict.keys()))
 
         # Calculate the number of samples we want from each of the big datasets
@@ -39,8 +40,6 @@ def resize_dataset_with_data_ratio(dataset_dict: OrderedDict, data_ratios: float
                 big_dataset_size = min(int(big_dataset_proposed_size), dataset_dict[big_dataset_name].num_rows)
                 # Downsample the dataset accordingly
                 big_dataset = dataset_dict[big_dataset_name]
-                # TODO: fix... this didn't work previously, something about random seeds needing to be ints
-                # train_dataset_dict[big_dataset_name] = big_dataset.shuffle(seed=SEED).select(range(big_dataset_count))
                 print(f"seed for shuffling before adjusting ratio is {SEED}, which is a(n) {type(SEED)}")
                 big_dataset = big_dataset.shuffle(seed=SEED)
                 dataset_dict[big_dataset_name] = big_dataset.select(range(big_dataset_size))

@@ -22,6 +22,63 @@ from transformers import AdamW, AutoModelForSequenceClassification, DataCollator
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
+def run_validation(model, trainings_so_far, val_dataset_dict, config, data_collator, device, overall_results):
+    for val_id, val_dataset in val_dataset_dict.items():
+        # TODO: Do we want shuffle = True?
+        val_dataloader = DataLoader(val_dataset,
+                                    shuffle=False,
+                                    batch_size=config['batch_size'],
+                                    collate_fn=data_collator)
+
+        print(f"EVAL: Created a DataLoader for corpus '{val_id}'...")
+
+        acc_metric = evaluate.load('accuracy')
+        f1_metric = evaluate.load('f1', average='macro')
+        precision_metric = evaluate.load('precision', average='macro')
+        recall_metric = evaluate.load('recall', average='macro')
+        recall_metric2 = evaluate.load('recall', average=None)
+
+        for batch_idx, batch in enumerate(val_dataloader):
+            batch = {k: v.to(device) for k, v in batch.items()}
+            with torch.no_grad():
+                outputs = model(**batch)
+                val_loss = outputs.loss
+
+                if batch_idx % config['wandb_log_interval'] == 0:
+                    wandb.log({f"Val Loss on {val_id} (trained: {trainings_so_far})": val_loss})
+
+            logits = outputs.logits
+            predictions = torch.argmax(logits, dim=-1)
+            for metric in [acc_metric, f1_metric, precision_metric, recall_metric, recall_metric2]:
+                metric.add_batch(predictions=predictions, references=batch["labels"])
+
+        results = acc_metric.compute()  # Creates a dictionary
+        for metric in [f1_metric, precision_metric, recall_metric]:
+            results.update(metric.compute(average='macro'))  # Add these to the dict
+
+        # Calculate recall of just contradictions class
+        if val_id in ["roamPH", "roamDD", "roamDDPH"]:
+            recall_con_val = -1  # Flag for recall con is undefined here
+        else:
+            recall_con_val = recall_metric2.compute(average=None)['recall'][2]  # 2 == contradictions index
+        results.update({'recall_con': recall_con_val})
+
+        # format the name of the result a bit
+        wandb_results = {f"Val: {val_id.upper()} {k.capitalize()}": v for k, v in results.items()}
+        wandb.log(wandb_results)
+        # torch.onnx.export(model, batch, "model.onnx")
+        # wandb.save("model.onnx")
+
+        results["Cumulative Training"] = trainings_so_far
+        results["Validation Set"] = val_id
+        results.update(config)
+
+        print(f"Results on {val_id}: {results}")
+        overall_results.append(results)
+
+        return None
+
+
 def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, training_args, try_speed, out_dir, SEED):
     """
     Main function for training the HF model.
@@ -66,7 +123,14 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     # Train on datasets in the input training dictionary
     overall_results = []
     training_list_so_far = ["none"]
+
+    # Potential optimization
     num_workers = 4 if try_speed else 0
+
+    # Calculate performance on all val corpora before any fine-tuning
+    model.eval()
+    run_validation(model, "none", val_dataset_dict, config, data_collator, device, overall_results)
+
     for train_id, train_dataset in train_dataset_dict.items():
         training_list_so_far.append(train_id)
         trainings_so_far = "_".join(training_list_so_far[:-1])
@@ -110,62 +174,11 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
 
         print(f"Training complete for corpus '{train_id}'.")
         print("Beginning evaluation...")
-        acc_metric = evaluate.load('accuracy')
-        f1_metric = evaluate.load('f1', average='macro')
-        precision_metric = evaluate.load('precision', average='macro')
-        recall_metric = evaluate.load('recall', average='macro')
-        recall_metric2 = evaluate.load('recall', average=None)
 
+        # Run validation on all val corpora. Overall results will get updated.
         model.eval()
         trainings_so_far = "_".join(training_list_so_far)
-        # For every fine-tune step, evaluate on all validation corpora
-        for val_id, val_dataset in val_dataset_dict.items():
-            # TODO: Do we want shuffle = True?
-            val_dataloader = DataLoader(val_dataset,
-                                        shuffle=False,
-                                        batch_size=config['batch_size'],
-                                        collate_fn=data_collator)#,
-                                        ##num_workers=4,  # speed up
-                                        ##pin_memory=True)  # speed up
-            print(f"EVAL: Created a DataLoader for corpus '{val_id}'...")
-
-            for batch_idx, batch in enumerate(val_dataloader):
-                batch = {k: v.to(device) for k, v in batch.items()}
-                with torch.no_grad():
-                    outputs = model(**batch)
-                    val_loss = outputs.loss
-
-                    if batch_idx % config['wandb_log_interval'] == 0:
-                        wandb.log({f"Val Loss on {val_id} (trained: {trainings_so_far})": val_loss})
-
-                logits = outputs.logits
-                predictions = torch.argmax(logits, dim=-1)
-                for metric in [acc_metric, f1_metric, precision_metric, recall_metric, recall_metric2]:
-                    metric.add_batch(predictions=predictions, references=batch["labels"])
-
-            results = acc_metric.compute()  # Creates a dictionary
-            for metric in [f1_metric, precision_metric, recall_metric]:
-                results.update(metric.compute(average='macro'))  # Add these to the dict
-
-            # Calculate recall of just contradictions class
-            if val_id in ["roamPH", "roamDD", "roamDDPH"]:
-                recall_con_val = -1  # Flag for recall con is undefined here
-            else:
-                recall_con_val = recall_metric2.compute(average=None)['recall'][2]  # 2 == contradictions index
-            results.update({'recall_con': recall_con_val})
-
-            # format the name of the result a bit
-            wandb_results = {f"Val: {val_id.upper()} {k.capitalize()}": v for k, v in results.items()}
-            wandb.log(wandb_results)
-            # torch.onnx.export(model, batch, "model.onnx")
-            # wandb.save("model.onnx")
-
-            results["Cumulative Training"] = trainings_so_far
-            results["Validation Set"] = val_id
-            results.update(config)
-
-            print(f"Results on {val_id}: {results}")
-            overall_results.append(results)
+        run_validation(model, trainings_so_far, val_dataset_dict, config, data_collator, device, overall_results)
 
     print("Overall evaluation complete.")
 
