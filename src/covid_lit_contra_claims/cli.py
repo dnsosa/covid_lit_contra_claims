@@ -17,7 +17,7 @@ from .evaluation.Evaluation import generate_report
 @click.option('--output_folder', 'out_dir')
 @click.option('--model', 'model')
 @click.option('--train_datasets', 'train_datasets')
-@click.option('--eval_datasets', 'eval_datasets')
+@click.option('--eval_datasets', 'eval_datasets', default="multinli_mednli_mancon_roam_roamPH_roamDD_roamDDPH")
 @click.option('--additional_eval_datasets', 'additional_eval_datasets', default=None)
 @click.option('--truncation/--no-truncation', 'truncation', default=True)
 @click.option('--train_prep_experiment', 'train_prep_experiment', default="sequential")
