@@ -58,10 +58,14 @@ def run_validation(model, trainings_so_far, val_dataset_dict, config, data_colla
 
         # Calculate recall of just contradictions class
         if val_id in ["roamPH", "roamDD", "roamDDPH"]:
+            recall_ent_val = -1  # TODO: What should the value be?
             recall_con_val = -1  # Flag for recall con is undefined here
         else:
-            recall_con_val = recall_metric2.compute(average=None)['recall'][2]  # 2 == contradictions index
-        results.update({'recall_con': recall_con_val})
+            recall_array = recall_metric2.compute(average=None)['recall']
+            recall_ent_val = recall_array[0]  # 0 == entailment index
+            recall_con_val = recall_array[2]  # 2 == contradictions index
+
+        results.update({'recall_ent': recall_ent_val, 'recall_con': recall_con_val})
 
         # format the name of the result a bit
         wandb_results = {f"Val: {val_id.upper()} {k.capitalize()}": v for k, v in results.items()}
@@ -128,8 +132,9 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     num_workers = 4 if try_speed else 0
 
     # Calculate performance on all val corpora before any fine-tuning
-    model.eval()
-    run_validation(model, "none", val_dataset_dict, config, data_collator, device, overall_results)
+    # NOTE: Not going to do this. Performance will be bad because model hasn't been fine-tuned on any NLI task yet.
+    # model.eval()
+    # run_validation(model, "none", val_dataset_dict, config, data_collator, device, overall_results)
 
     for train_id, train_dataset in train_dataset_dict.items():
         training_list_so_far.append(train_id)
