@@ -80,7 +80,7 @@ def run_validation(model, trainings_so_far, val_dataset_dict, config, data_colla
         print(f"Results on {val_id}: {results}")
         overall_results.append(results)
 
-        return None
+    return None
 
 
 def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, training_args, try_speed, out_dir, SEED):
