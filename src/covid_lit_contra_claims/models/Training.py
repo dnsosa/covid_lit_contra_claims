@@ -199,6 +199,7 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
     os.makedirs(experiment_out_dir, exist_ok=True)
 
     eval_split = "test" if is_test else "val"
+    print(f"Eval split: {eval_split}")
     out_filepath = os.path.join(experiment_out_dir, f"{eval_split}_metrics.csv")
     print(f"Saving results to {out_filepath} ....")
     overall_results_df = pd.DataFrame(overall_results)

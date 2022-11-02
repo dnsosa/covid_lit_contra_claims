@@ -110,6 +110,7 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
                                                   truncation=truncation,
                                                   SEED=SEED)
     if report_test:
+        print("Running evaluations on test set.")
         _, _ = train_model(model,
                            tokenizer,
                            prepared_train_dataset_dict,
