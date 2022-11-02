@@ -69,7 +69,7 @@ def load_train_datasets(train_datasets_id: str, tokenizer, truncation: bool, SEE
     val_dataset_dict = OrderedDict()
     test_dataset_dict = OrderedDict()
 
-    permissable_train_ids = {"multinli", "mednli", "mancon", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH"}
+    permissable_train_ids = {"multinli", "mednli", "mancon", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH", "roamSS"}
     for data_id in train_datasets_id.split("_"):
         if data_id in permissable_train_ids:
             print(f"====Creating {data_id} Dataset object for train/val/test...====")
@@ -96,7 +96,7 @@ def load_additional_eval_datasets(eval_datasets_id: str, tokenizer, truncation: 
     """
     eval_dataset_dict = OrderedDict()
 
-    permissable_eval_ids = {"multinli", "mednli", "mancon", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH"}
+    permissable_eval_ids = {"multinli", "mednli", "mancon", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH", "roamSS"}
     for data_id in eval_datasets_id.split("_"):
         if data_id in permissable_eval_ids:
             print(f"====Creating {data_id} Dataset object for evaluation only...====")
