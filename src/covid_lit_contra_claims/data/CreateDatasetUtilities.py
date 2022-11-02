@@ -17,7 +17,7 @@ DRUG_LIST = ["hydroxychloroquine", " chloroquine", "tocilizumab", "remdesivir", 
              "dexamethasone"]
 
 
-def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_frac: float, SEED: int):
+def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_frac: float, SEED: int, single_sent_only: bool):
     """
     Create sentence pairs dataset from the original xml ManCon Corpus.
 
@@ -95,6 +95,9 @@ def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_
             n_neutral = round(max_non_neu * neutral_frac)
             mancon_neu_down_df = mancon_nli_df[mancon_nli_df.label == 'neutral'].sample(n=n_neutral)
             mancon_nli_df = pd.concat([mancon_con_ent_df, mancon_neu_down_df])
+
+        if single_sent_only and (splits[split_i] != "train"):
+            mancon_nli_df["sentence2"] = "."
 
         mancon_nli_df_dict[splits[split_i]] = mancon_nli_df.sample(frac=1, random_state=SEED)
 

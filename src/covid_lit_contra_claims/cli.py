@@ -50,17 +50,24 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
     train_dataset_dict, _, _ = load_train_datasets(train_datasets, tokenizer,
                                                    truncation=truncation,
                                                    SEED=SEED)
-    # Load val and test datasets
-    _, val_dataset_dict, test_dataset_dict = load_train_datasets(eval_datasets, tokenizer,
-                                                                 truncation=truncation,
-                                                                 SEED=SEED)
+    # Load val datasets
+    if not report_test:
+        # eval = val
+        _, eval_dataset_dict, _ = load_train_datasets(eval_datasets, tokenizer,
+                                                      truncation=truncation,
+                                                      SEED=SEED)
+    else:
+        # eval = test
+        _, _, eval_dataset_dict = load_train_datasets("mancon_manconSS_roam_roamSS", tokenizer,
+                                                      truncation=truncation,
+                                                      SEED=SEED)
 
     # Optionally load more test datasets
     if additional_eval_datasets is not None:
         additional_eval_dataset_dict = load_additional_eval_datasets(additional_eval_datasets, tokenizer,
                                                                      truncation=truncation,
                                                                      SEED=SEED)
-        test_dataset_dict.update(additional_eval_dataset_dict)
+        eval_dataset_dict.update(additional_eval_dataset_dict)
 
     # PERTURB DATA
     ################
@@ -71,10 +78,10 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
                                                                        data_ratios=data_ratios,
                                                                        is_train=True,
                                                                        SEED=SEED)
-    ratio_adjusted_val_dataset_dict = resize_dataset_with_data_ratio(val_dataset_dict,
-                                                                     data_ratios=data_ratios,
-                                                                     is_train=False,
-                                                                     SEED=SEED)
+    ratio_adjusted_eval_dataset_dict = resize_dataset_with_data_ratio(eval_dataset_dict,
+                                                                      data_ratios=data_ratios,
+                                                                      is_train=False,
+                                                                      SEED=SEED)
     prepared_train_dataset_dict = prepare_training_data(ratio_adjusted_train_dataset_dict,
                                                         train_prep_experiment,
                                                         SEED)
@@ -92,23 +99,22 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
                      'train_prep_experiment': train_prep_experiment,
                      'data_ratios': data_ratios,
                      'SEED': SEED}
+
+    print(f"Running evaluation on {'test' if report_test else 'val'} dataset.")
     trained_model, overall_results = train_model(model,
                                                  tokenizer,
                                                  prepared_train_dataset_dict,
-                                                 ratio_adjusted_val_dataset_dict,
+                                                 ratio_adjusted_eval_dataset_dict,
                                                  training_args=training_args,
                                                  try_speed=try_speed,
                                                  out_dir=out_dir,
-                                                 SEED=SEED)
+                                                 SEED=SEED,
+                                                 is_test=report_test)
 
     # OPTIONAL: FINAL REPORT
     ########################
     # Based on test set statistics
 
-    # TODO: Update, this is just me being lazy
-    _, _, test_dataset_dict = load_train_datasets("mancon_roam_roamSS", tokenizer,
-                                                  truncation=truncation,
-                                                  SEED=SEED)
     if report_test:
         print("Running evaluations on test set.")
         _, _ = train_model(model,

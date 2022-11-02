@@ -85,7 +85,7 @@ def create_mednli_dataset(mednli_train_path: str, mednli_dev_path: str, mednli_t
     return mednli_dataset
 
 
-def create_mancon_dataset(mancon_xml_path: str, mancon_neutral_frac: float, mancon_train_frac: float, SEED: int):
+def create_mancon_dataset(mancon_xml_path: str, mancon_neutral_frac: float, mancon_train_frac: float, SEED: int, single_sent_only=False):
     """
     Create the ManConCorpus HF DatasetDict.
 
@@ -98,7 +98,8 @@ def create_mancon_dataset(mancon_xml_path: str, mancon_neutral_frac: float, manc
 
     # Load
     raw_mancon_pandas_df_dict = generate_mancon_pandas_dfs(mancon_xml_path, neutral_frac=mancon_neutral_frac,
-                                                           mancon_train_frac=mancon_train_frac, SEED=SEED)
+                                                           mancon_train_frac=mancon_train_frac, SEED=SEED,
+                                                           single_sent_only=single_sent_only)
     mancon_dataset = pandas_dict_to_dataset_dict(raw_mancon_pandas_df_dict)
     # Preprocess
     mancon_dataset = mancon_dataset.rename_column("label", "labels")
@@ -121,7 +122,7 @@ def create_roam_dataset(roam_path, single_sent_only=False):
         roam_df = pd.read_excel(roam_path, sheet_name=data_split)
         roam_df = roam_df.drop(roam_df.columns[0], axis=1)
         roam_df = roam_df.dropna().reset_index(drop=True)
-        if single_sent_only:
+        if single_sent_only and data_split in ["Val", "Test"]:
             roam_df["text2"] = "."
         roam_df_list.append(Dataset.from_pandas(roam_df))
     raw_roam_dataset_dict = dict(zip([split.lower() for split in splits], roam_df_list))
