@@ -37,6 +37,9 @@ def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, truncation=True, SEE
     elif corpus_id == "roamDDPH":
         raw_dataset = create_roam_dd_ph_dataset(ROAM_ALL_PATH, SEED=SEED)
 
+    elif corpus_id == "roamSS":
+        raw_dataset = create_roam_dataset(ROAM_SEP_PATH, single_sent_only=True)
+
     else:
         print("Invalid corpus ID. Pre-processing failed. ")
         return None

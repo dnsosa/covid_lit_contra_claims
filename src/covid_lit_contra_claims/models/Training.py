@@ -83,7 +83,7 @@ def run_validation(model, trainings_so_far, val_dataset_dict, config, data_colla
     return None
 
 
-def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, training_args, try_speed, out_dir, SEED):
+def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, training_args, try_speed, out_dir, SEED, is_test=False):
     """
     Main function for training the HF model.
 
@@ -198,7 +198,8 @@ def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, train
                                       experiment_id)
     os.makedirs(experiment_out_dir, exist_ok=True)
 
-    out_filepath = os.path.join(experiment_out_dir, "val_metrics.csv")
+    eval_split = "test" if is_test else "val"
+    out_filepath = os.path.join(experiment_out_dir, f"{eval_split}_metrics.csv")
     print(f"Saving results to {out_filepath} ....")
     overall_results_df = pd.DataFrame(overall_results)
     overall_results_df.to_csv(out_filepath, index=False)

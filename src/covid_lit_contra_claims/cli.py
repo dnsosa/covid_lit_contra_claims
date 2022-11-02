@@ -23,13 +23,13 @@ from .evaluation.Evaluation import generate_report
 @click.option('--train_prep_experiment', 'train_prep_experiment', default="sequential")
 @click.option('--data_ratios', 'data_ratios', default=None)
 @click.option('--speed/--no-speed', 'try_speed', default=True)
-@click.option('--report/--no-report', 'report', default=False)
+@click.option('--report/--no-report', 'report_test', default=False)
 @click.option('--learning_rate', 'learning_rate', default=1e-6)
 @click.option('--batch_size', 'batch_size', default=2)
 @click.option('--epochs', 'epochs', default=3)
 @click.option('--SEED', 'SEED', default=42)
 def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets, truncation, train_prep_experiment,
-         data_ratios, try_speed, report, learning_rate, batch_size, epochs, SEED):
+         data_ratios, try_speed, report_test, learning_rate, batch_size, epochs, SEED):
     """Run main function."""
 
     # LOAD TOKENIZER
@@ -104,11 +104,21 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
     # OPTIONAL: FINAL REPORT
     ########################
     # Based on test set statistics
-    if report:
-        results_summary = generate_report(trained_model,
-                                          test_dataset_dict,
-                                          out_dir=out_dir)
-        print(f"Summary of training: {results_summary}")
+
+    # TODO: Update, this is just me being lazy
+    _, _, test_dataset_dict = load_train_datasets("mancon_roam_roamSS", tokenizer,
+                                                  truncation=truncation,
+                                                  SEED=SEED)
+    if report_test:
+        _, _ = train_model(model,
+                           tokenizer,
+                           prepared_train_dataset_dict,
+                           test_dataset_dict,
+                           training_args=training_args,
+                           try_speed=try_speed,
+                           out_dir=out_dir,
+                           SEED=SEED,
+                           is_test=True)
 
 
 if __name__ == '__main__':
