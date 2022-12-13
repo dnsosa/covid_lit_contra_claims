@@ -98,11 +98,15 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
     claims_df = pd.read_csv(CLAIMS_SUBSET_PATH)
 
     trained_model = trained_model.to('cpu')
+    print("Model has been moved to CPU")
 
     pipe = TextClassificationPipeline(model=trained_model, tokenizer=tokenizer, top_k=None)
     claims_pairs = [{'text': [c1, c2]} for c1, c2 in list(zip(claims_df["text1"], claims_df["text2"]))]
+    print("Created text classification pipeline")
 
     pipe_preds = pipe(claims_pairs, padding=True, truncation=True)
+    print("Predictions have been made!")
+
     pipe_preds_df = pd.concat([pd.DataFrame(d).pivot_table(columns='label', values='score') for d in pipe_preds])
     pipe_preds_df = pipe_preds_df.reset_index(drop=True).reset_index(drop=True)
     results = pd.concat([claims_df, pipe_preds_df])
