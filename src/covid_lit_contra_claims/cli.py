@@ -113,7 +113,7 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
                                                  is_test=report_test)
 
     if pred_all_pairs:
-        eval_model_pipeline(trained_model, tokenizer, out_dir=out_dir)
+        eval_model_pipeline(trained_model, tokenizer, out_dir=out_dir, SEED=SEED)
 
 
 if __name__ == '__main__':

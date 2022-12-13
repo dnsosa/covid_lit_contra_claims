@@ -80,22 +80,24 @@ def eval_model(trained_model, tokenizer, all_pairs_dataset_dict, config, out_dir
     return None
 
 
-def eval_model_pipeline(trained_model, tokenizer, out_dir):
+def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
     """
     Make predictions using the trained model.
 
     :param trained_model: trained HuggingFace model
     :param tokenizer: HF tokenizer
-    :param all_pairs_dataset_dict: Dataset dictionary containing all claim pairs about which to make predictions
     :param out_dir: output directory to write results
     :param SEED: random seed
     """
 
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
+
     # Load claims data
     claims_df = pd.read_csv(ALL_CLAIMS_PATH)
 
-    pipe = TextClassificationPipeline(model=trained_model, tokenizer=tokenizer, return_all_scores=True)
-    claims_pairs = [[c1, c2] for c1, c2 in list(zip(claims_df["text1"], claims_df["text2"]))]
+    pipe = TextClassificationPipeline(model=trained_model, tokenizer=tokenizer, top_k=None)
+    claims_pairs = [{'text': [c1, c2]} for c1, c2 in list(zip(claims_df["text1"], claims_df["text2"]))]
 
     pipe_preds = pipe(claims_pairs, padding=True, truncation=True)
     pipe_preds_df = pd.concat([pd.DataFrame(d).pivot_table(columns='label', values='score') for d in pipe_preds])
