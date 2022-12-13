@@ -8,6 +8,7 @@ import os
 HERE = os.path.abspath(os.path.dirname(__file__))
 IN_DATA_DIR = os.path.join(HERE, '../../../input')
 
+ALL_CLAIMS_PATH = os.path.join(IN_DATA_DIR, 'cord19/claims/drug_individual_claims_filtered_200620.csv')
 MEDNLI_TRAIN_PATH = os.path.join(IN_DATA_DIR, 'mednli/mli_train_v1.jsonl')
 MEDNLI_DEV_PATH = os.path.join(IN_DATA_DIR, 'mednli/mli_dev_v1.jsonl')
 MEDNLI_TEST_PATH = os.path.join(IN_DATA_DIR, 'mednli/mli_test_v1.jsonl')

@@ -137,6 +137,29 @@ def create_roam_dataset(roam_path, single_sent_only=False):
     return roam_dataset
 
 
+def create_all_pairs_dataset(all_claims_path):
+    """
+    Create the all CORD19 claim pairs DatasetDict.
+
+    :param all_claims_path: path to all claim pairs
+    :return: All claim pairs DatasetDict
+    """
+    # Load
+    splits = ["Test"]
+    claims_df = pd.read_csv(all_claims_path)
+    claims_df = claims_df.drop(claims_df.columns[0], axis=1)
+    claims_df = claims_df.dropna().reset_index(drop=True)
+    claims_df_list = [Dataset.from_pandas(claims_df)]
+    raw_claims_dataset_dict = dict(zip([split.lower() for split in splits], claims_df_list))
+    claims_dataset = DatasetDict(raw_claims_dataset_dict)
+
+    # Preprocess
+    claims_dataset = claims_dataset.rename_column("text1", "sentence1")
+    claims_dataset = claims_dataset.rename_column("text2", "sentence2")
+
+    return claims_dataset
+
+
 def create_roam_full_dataset(roam_full_path, SEED: int):
     """
     Create the Roam full HF DatasetDict.

@@ -10,7 +10,7 @@ from .data.constants import model_id_mapper
 from .data.DataLoader import load_train_datasets, load_additional_eval_datasets
 from .data.DataExperiments import prepare_training_data, resize_dataset_with_data_ratio
 from .models.Training import train_model
-from .evaluation.Evaluation import generate_report
+from .evaluation.Evaluation import eval_model_pipeline
 
 
 @click.command()
@@ -24,12 +24,13 @@ from .evaluation.Evaluation import generate_report
 @click.option('--data_ratios', 'data_ratios', default=None)
 @click.option('--speed/--no-speed', 'try_speed', default=True)
 @click.option('--report/--no-report', 'report_test', default=False)
+@click.option('--pred_all_pairs/--no-pred_all_pairs', 'pred_all_pairs', default=False)
 @click.option('--learning_rate', 'learning_rate', default=1e-6)
 @click.option('--batch_size', 'batch_size', default=2)
 @click.option('--epochs', 'epochs', default=3)
 @click.option('--SEED', 'SEED', default=42)
 def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets, truncation, train_prep_experiment,
-         data_ratios, try_speed, report_test, learning_rate, batch_size, epochs, SEED):
+         data_ratios, try_speed, report_test, pred_all_pairs, learning_rate, batch_size, epochs, SEED):
     """Run main function."""
 
     # LOAD TOKENIZER
@@ -111,21 +112,8 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
                                                  SEED=SEED,
                                                  is_test=report_test)
 
-    # OPTIONAL: FINAL REPORT
-    ########################
-    # Based on test set statistics
-
-    if report_test:
-        print("Running evaluations on test set.")
-        _, _ = train_model(model,
-                           tokenizer,
-                           prepared_train_dataset_dict,
-                           test_dataset_dict,
-                           training_args=training_args,
-                           try_speed=try_speed,
-                           out_dir=out_dir,
-                           SEED=SEED,
-                           is_test=True)
+    if pred_all_pairs:
+        eval_model_pipeline(trained_model, tokenizer, out_dir=out_dir)
 
 
 if __name__ == '__main__':

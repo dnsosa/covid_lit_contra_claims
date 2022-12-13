@@ -6,7 +6,7 @@ Collection of functions for loading data for covid_lit_contra_claims.
 
 from collections import OrderedDict
 
-from .constants import MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, MEDNLI_TRAIN_PATH, MEDNLI_DEV_PATH, \
+from .constants import ALL_CLAIMS_PATH, MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, MEDNLI_TRAIN_PATH, MEDNLI_DEV_PATH, \
     MEDNLI_TEST_PATH, MANCON_XML_PATH, ROAM_ALL_PATH, ROAM_SEP_PATH
 from .CreateDataset import *
 
@@ -43,12 +43,18 @@ def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, truncation=True, SEE
     elif corpus_id == "roamSS":
         raw_dataset = create_roam_dataset(ROAM_SEP_PATH, single_sent_only=True)
 
+    elif corpus_id == "allPairs":
+        raw_dataset = create_all_pairs_dataset(ALL_CLAIMS_PATH)
+
     else:
         print("Invalid corpus ID. Pre-processing failed. ")
         return None
 
-    old_column_names = raw_dataset['train'].column_names
-    old_column_names.remove('labels')
+    if corpus_id == "allPairs":
+        old_column_names = raw_dataset['test'].column_names
+    else:
+        old_column_names = raw_dataset['train'].column_names
+        old_column_names.remove('labels')
 
     def tokenize_data(example, tokenizer=tokenizer):
         return tokenizer(example["sentence1"], example["sentence2"], truncation=truncation)
@@ -72,7 +78,7 @@ def load_train_datasets(train_datasets_id: str, tokenizer, truncation: bool, SEE
     val_dataset_dict = OrderedDict()
     test_dataset_dict = OrderedDict()
 
-    permissable_train_ids = {"multinli", "mednli", "mancon", "manconSS", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH", "roamSS"}
+    permissable_train_ids = {"multinli", "mednli", "mancon", "manconSS", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH", "roamSS", "allPairs"}
     for data_id in train_datasets_id.split("_"):
         if data_id in permissable_train_ids:
             print(f"====Creating {data_id} Dataset object for train/val/test...====")
@@ -99,7 +105,7 @@ def load_additional_eval_datasets(eval_datasets_id: str, tokenizer, truncation: 
     """
     eval_dataset_dict = OrderedDict()
 
-    permissable_eval_ids = {"multinli", "mednli", "mancon", "manconSS", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH", "roamSS"}
+    permissable_eval_ids = {"multinli", "mednli", "mancon", "manconSS", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH", "roamSS", "allPairs"}
     for data_id in eval_datasets_id.split("_"):
         if data_id in permissable_eval_ids:
             print(f"====Creating {data_id} Dataset object for evaluation only...====")
