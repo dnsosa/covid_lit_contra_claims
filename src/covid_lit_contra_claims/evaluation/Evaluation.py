@@ -96,6 +96,8 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
     # Load claims data
     claims_df = pd.read_csv(ALL_CLAIMS_PATH)
 
+    trained_model = trained_model.to('cpu')
+
     pipe = TextClassificationPipeline(model=trained_model, tokenizer=tokenizer, top_k=None)
     claims_pairs = [{'text': [c1, c2]} for c1, c2 in list(zip(claims_df["text1"], claims_df["text2"]))]
 
