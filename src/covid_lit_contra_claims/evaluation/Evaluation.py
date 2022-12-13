@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from ..data.constants import ALL_CLAIMS_PATH
+from ..data.constants import ALL_CLAIMS_PATH, CLAIMS_SUBSET_PATH
 from torch.utils.data import DataLoader
 from transformers import DataCollatorWithPadding, TextClassificationPipeline
 
@@ -94,7 +94,8 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
     np.random.seed(SEED)
 
     # Load claims data
-    claims_df = pd.read_csv(ALL_CLAIMS_PATH)
+    # claims_df = pd.read_csv(ALL_CLAIMS_PATH)
+    claims_df = pd.read_csv(CLAIMS_SUBSET_PATH)
 
     trained_model = trained_model.to('cpu')
 
@@ -106,7 +107,7 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
     pipe_preds_df = pipe_preds_df.reset_index(drop=True).reset_index(drop=True)
     results = pd.concat([claims_df, pipe_preds_df])
 
-    out_path = os.path.join(out_dir, "all_claims_with_predictions_df.tsv")
+    out_path = os.path.join(out_dir, "claims_subset_with_predictions_df.tsv")
     results.to_csv(out_path, sep='\t', index=False)
 
     return results
