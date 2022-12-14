@@ -10,6 +10,7 @@ IN_DATA_DIR = os.path.join(HERE, '../../../input')
 
 ALL_CLAIMS_PATH = os.path.join(IN_DATA_DIR, 'cord19/claims/drug_individual_claims_filtered_200620.csv')
 CLAIMS_SUBSET_PATH = os.path.join(IN_DATA_DIR, 'cord19/claims/claim_pairs_subset.csv')
+SYNTHETIC_PREMISE_HCQ_PATH = os.path.join(IN_DATA_DIR, 'cord19/claims/synthetic_premise_hcq_pairs.csv')
 MEDNLI_TRAIN_PATH = os.path.join(IN_DATA_DIR, 'mednli/mli_train_v1.jsonl')
 MEDNLI_DEV_PATH = os.path.join(IN_DATA_DIR, 'mednli/mli_dev_v1.jsonl')
 MEDNLI_TEST_PATH = os.path.join(IN_DATA_DIR, 'mednli/mli_test_v1.jsonl')

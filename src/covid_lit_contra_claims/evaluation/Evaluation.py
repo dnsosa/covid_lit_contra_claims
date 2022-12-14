@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from ..data.constants import ALL_CLAIMS_PATH, CLAIMS_SUBSET_PATH
+from ..data.constants import ALL_CLAIMS_PATH, CLAIMS_SUBSET_PATH, SYNTHETIC_PREMISE_HCQ_PATH
 from torch.utils.data import DataLoader
 from transformers import DataCollatorWithPadding, TextClassificationPipeline
 
@@ -95,7 +95,7 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
 
     # Load claims data
     # claims_df = pd.read_csv(ALL_CLAIMS_PATH)
-    claims_df = pd.read_csv(CLAIMS_SUBSET_PATH).reset_index(drop=True)
+    claims_df = pd.read_csv(SYNTHETIC_PREMISE_HCQ_PATH).reset_index(drop=True)
 
     print("Moving trained model to CPU...")
     trained_model = trained_model.to('cpu')
