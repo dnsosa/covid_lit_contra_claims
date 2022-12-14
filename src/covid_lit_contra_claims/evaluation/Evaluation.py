@@ -95,8 +95,9 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
 
     # Load claims data
     # claims_df = pd.read_csv(ALL_CLAIMS_PATH)
-    claims_df = pd.read_csv(CLAIMS_SUBSET_PATH)
+    claims_df = pd.read_csv(CLAIMS_SUBSET_PATH).reset_index(drop=True)
 
+    print("Moving trained model to CPU...")
     trained_model = trained_model.to('cpu')
     print("Model has been moved to CPU")
 
@@ -108,8 +109,8 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
     print("Predictions have been made!")
 
     pipe_preds_df = pd.concat([pd.DataFrame(d).pivot_table(columns='label', values='score') for d in pipe_preds])
-    pipe_preds_df = pipe_preds_df.reset_index(drop=True).reset_index(drop=True)
-    results = pd.concat([claims_df, pipe_preds_df])
+    pipe_preds_df = pipe_preds_df.reset_index(drop=True)
+    results = pd.concat([claims_df, pipe_preds_df], axis=1)
 
     out_path = os.path.join(out_dir, "claims_subset_with_predictions_df.tsv")
     results.to_csv(out_path, sep='\t', index=False)
