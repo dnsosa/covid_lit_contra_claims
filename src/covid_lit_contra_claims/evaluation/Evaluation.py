@@ -80,13 +80,14 @@ def eval_model(trained_model, tokenizer, all_pairs_dataset_dict, config, out_dir
     return None
 
 
-def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
+def eval_model_pipeline(trained_model, tokenizer, out_dir, claims_set_id, SEED):
     """
     Make predictions using the trained model.
 
     :param trained_model: trained HuggingFace model
     :param tokenizer: HF tokenizer
     :param out_dir: output directory to write results
+    :param claim_set_id: identifier for set of pairs to make NLI predictions
     :param SEED: random seed
     """
 
@@ -94,17 +95,28 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
     np.random.seed(SEED)
 
     # Load claims data
-    # claims_df = pd.read_csv(ALL_CLAIMS_PATH)
-    claims_df = pd.read_csv(SYNTHETIC_PREMISE_HCQ_PATH).reset_index(drop=True)
+    if claims_set_id == "synth_hcq":
+        claims_df = pd.read_csv(SYNTHETIC_PREMISE_HCQ_PATH).reset_index(drop=True)
+    elif claims_set_id == "claims_subset":
+        claims_df = pd.read_csv(CLAIMS_SUBSET_PATH)
+    elif claims_set_id == "all_claims":
+        claims_df = pd.read_csv(ALL_CLAIMS_PATH)
+    else:
+        print(f"Invalid claims_set_id '{claims_set_id}', cannot load claims for inference. Exiting...")
+        return None
 
     print("Moving trained model to CPU...")
     trained_model = trained_model.to('cpu')
     print("Model has been moved to CPU")
 
     pipe = TextClassificationPipeline(model=trained_model, tokenizer=tokenizer, top_k=None)
-    claims_pairs = [{'text': [c1, c2]} for c1, c2 in list(zip(claims_df["text1"], claims_df["text2"]))]
-    print("Created text classification pipeline")
 
+    # Need to format correctly for pipeline
+    claim_pairs_tuples = [(c1, c2) for c1, c2 in list(zip(claims_df["text1"], claims_df["text2"]))]
+    claims_pairs = [{'text': c1, 'text_pair': c2} for c1, c2 in claim_pairs_tuples]
+    print("Created text classification pipeline and prepared claims pairs for inference.")
+
+    print("Beginning inference...")
     pipe_preds = pipe(claims_pairs, padding=True, truncation=True)
     print("Predictions have been made!")
 
@@ -112,7 +124,7 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, SEED):
     pipe_preds_df = pipe_preds_df.reset_index(drop=True)
     results = pd.concat([claims_df, pipe_preds_df], axis=1)
 
-    out_path = os.path.join(out_dir, "claims_subset_with_predictions_df.tsv")
+    out_path = os.path.join(out_dir, f"{claims_set_id}_preds_df.tsv")
     results.to_csv(out_path, sep='\t', index=False)
 
     return results
