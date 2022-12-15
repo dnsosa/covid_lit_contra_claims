@@ -96,7 +96,7 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, claims_set_id, SEED):
 
     # Load claims data
     if claims_set_id == "synth_hcq":
-        claims_df = pd.read_csv(SYNTHETIC_PREMISE_HCQ_PATH).reset_index(drop=True)
+        claims_df = pd.read_csv(SYNTHETIC_PREMISE_HCQ_PATH)
     elif claims_set_id == "claims_subset":
         claims_df = pd.read_csv(CLAIMS_SUBSET_PATH)
     elif claims_set_id == "all_claims":
@@ -122,6 +122,7 @@ def eval_model_pipeline(trained_model, tokenizer, out_dir, claims_set_id, SEED):
 
     pipe_preds_df = pd.concat([pd.DataFrame(d).pivot_table(columns='label', values='score') for d in pipe_preds])
     pipe_preds_df = pipe_preds_df.reset_index(drop=True)
+    claims_df = claims_df.reset_index(drop=True)
     results = pd.concat([claims_df, pipe_preds_df], axis=1)
 
     out_path = os.path.join(out_dir, f"{claims_set_id}_preds_df.tsv")
