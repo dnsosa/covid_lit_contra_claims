@@ -1,28 +1,41 @@
-"""
-Collection of functions for training the models for the covid_lit_contra_claims pipeline.
-"""
+"""Collection of functions for training the models for the covid_lit_contra_claims pipeline."""
 
 # -*- coding: utf-8 -*-
 
-import json
 import os
 
 import evaluate
+
 import numpy as np
+
 import pandas as pd
+
 import torch
+from torch.utils.data import DataLoader
+
+from transformers import AdamW, AutoModelForSequenceClassification, DataCollatorWithPadding, get_scheduler
+
 import wandb
 
-from ..data.constants import model_id_mapper, MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, WANDB_LOG_INTERVAL, WANDB_LOG_FREQ
+from ..data.constants import MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, WANDB_LOG_FREQ, WANDB_LOG_INTERVAL, model_id_mapper
 
-from torch.utils.data import DataLoader
-from transformers import AdamW, AutoModelForSequenceClassification, DataCollatorWithPadding, get_scheduler
 
 # Use TF32 instead of FP32 -- decrease precision in a non-impactful way for a speed up
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def run_validation(model, trainings_so_far, val_dataset_dict, config, data_collator, device, overall_results):
+    """
+    Run validation with an input (trained) model.
+
+    :param model: Trained Transformer
+    :param trainings_so_far: string ID indicating datasets already used in fine-tuning
+    :param val_dataset_dict: HF DatasetDict for validation datasets
+    :param config: config dictionary
+    :param data_collator: DataCollator object for use in DataLoader
+    :param device: GPU device
+    :param overall_results: overall results (list of dictionaries) to be updated
+    """
     for val_id, val_dataset in val_dataset_dict.items():
         # TODO: Do we want shuffle = True?
         val_dataloader = DataLoader(val_dataset,
@@ -83,19 +96,22 @@ def run_validation(model, trainings_so_far, val_dataset_dict, config, data_colla
     return None
 
 
-def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, training_args, try_speed, out_dir, SEED, is_test=False):
+def train_model(model_id, tokenizer, train_dataset_dict, val_dataset_dict, training_args, try_speed, out_dir, SEED,
+                is_test=False):
     """
-    Main function for training the HF model.
+    Train the HF model.
 
-    :param model: identifier of the model(s) to train.
+    :param model_id: identifier of the model(s) to train.
+    :param tokenizer: HF Tokenizer for corresponding model
     :param train_dataset_dict: dictionary of training Datasets
     :param val_dataset_dict: dictionary of validation Datasets
-    :param training_args: arguments for training
+    :param training_args: arguments for training (config dict)
+    :param try_speed: if True, try to optimize performance as per HF recommendations
     :param out_dir: directory to output weights/intermediate results
     :param SEED: random seed
+    :param is_test: if True, this is the test split, only used for naming out file
     :return: trained model
     """
-
     # Set random seeds
     torch.manual_seed(SEED)
     np.random.seed(SEED)

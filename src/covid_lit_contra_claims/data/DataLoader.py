@@ -1,18 +1,29 @@
-"""
-Collection of functions for loading data for covid_lit_contra_claims.
-"""
+"""Collection of functions for loading data for covid_lit_contra_claims."""
 
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
 
-from .constants import ALL_CLAIMS_PATH, MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, MEDNLI_TRAIN_PATH, MEDNLI_DEV_PATH, \
-    MEDNLI_TEST_PATH, MANCON_XML_PATH, ROAM_ALL_PATH, ROAM_SEP_PATH
-from .CreateDataset import *
+from .CreateDataset import create_all_pairs_dataset, create_mancon_dataset, create_mednli_dataset, \
+    create_multinli_dataset, create_roam_dataset, create_roam_dd_dataset, create_roam_dd_ph_dataset, \
+    create_roam_full_dataset, create_roam_ph_dataset
+from .constants import ALL_CLAIMS_PATH, MANCON_NEUTRAL_FRAC, MANCON_TRAIN_FRAC, MANCON_XML_PATH, MEDNLI_DEV_PATH, \
+    MEDNLI_TEST_PATH, MEDNLI_TRAIN_PATH, ROAM_ALL_PATH, ROAM_SEP_PATH
 
 
 def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, truncation=True, SEED=42,
                                       mancon_neutral_frac=MANCON_NEUTRAL_FRAC, mancon_train_frac=MANCON_TRAIN_FRAC):
+    """
+    Preprocess the corpora by creating the datasets for HF.
+
+    :param corpus_id: string identifier for corpus
+    :param tokenizer: HF tokenizer
+    :param truncation: if True, truncate as normal
+    :param SEED: random seed
+    :param mancon_neutral_frac: downsample neutral class from ManCon to be (size of the next biggest class) * MNF
+    :param mancon_train_frac: fraction of questions from ManCon to use for training--split rest between val/test
+    :return: tokenized Dataset objects
+    """
     if corpus_id == "multinli":
         raw_dataset = create_multinli_dataset(SEED=SEED)
 
@@ -23,7 +34,8 @@ def preprocess_nli_corpus_for_pytorch(corpus_id, tokenizer, truncation=True, SEE
         raw_dataset = create_mancon_dataset(MANCON_XML_PATH, mancon_neutral_frac, mancon_train_frac, SEED=SEED)
 
     elif corpus_id == "manconSS":
-        raw_dataset = create_mancon_dataset(MANCON_XML_PATH, mancon_neutral_frac, mancon_train_frac, SEED=SEED, single_sent_only=True)
+        raw_dataset = create_mancon_dataset(MANCON_XML_PATH, mancon_neutral_frac, mancon_train_frac, SEED=SEED,
+                                            single_sent_only=True)
 
     elif corpus_id == "roam":
         raw_dataset = create_roam_dataset(ROAM_SEP_PATH)
@@ -78,7 +90,8 @@ def load_train_datasets(train_datasets_id: str, tokenizer, truncation: bool, SEE
     val_dataset_dict = OrderedDict()
     test_dataset_dict = OrderedDict()
 
-    permissable_train_ids = {"multinli", "mednli", "mancon", "manconSS", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH", "roamSS", "allPairs"}
+    permissable_train_ids = {"multinli", "mednli", "mancon", "manconSS", "roam", "roamAll", "roamPH", "roamDD",
+                             "roamDDPH", "roamSS", "allPairs"}
     for data_id in train_datasets_id.split("_"):
         if data_id in permissable_train_ids:
             print(f"====Creating {data_id} Dataset object for train/val/test...====")
@@ -105,7 +118,8 @@ def load_additional_eval_datasets(eval_datasets_id: str, tokenizer, truncation: 
     """
     eval_dataset_dict = OrderedDict()
 
-    permissable_eval_ids = {"multinli", "mednli", "mancon", "manconSS", "roam", "roamAll", "roamPH", "roamDD", "roamDDPH", "roamSS", "allPairs"}
+    permissable_eval_ids = {"multinli", "mednli", "mancon", "manconSS", "roam", "roamAll", "roamPH", "roamDD",
+                            "roamDDPH", "roamSS", "allPairs"}
     for data_id in eval_datasets_id.split("_"):
         if data_id in permissable_eval_ids:
             print(f"====Creating {data_id} Dataset object for evaluation only...====")
@@ -116,5 +130,3 @@ def load_additional_eval_datasets(eval_datasets_id: str, tokenizer, truncation: 
             print(f"WARNING: {data_id} is not a valid data identifier. A Dataset object was not built.")
 
     return eval_dataset_dict
-
-

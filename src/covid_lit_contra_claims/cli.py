@@ -6,11 +6,11 @@ import click
 
 from transformers import AutoTokenizer
 
-from .data.constants import model_id_mapper
-from .data.DataLoader import load_train_datasets, load_additional_eval_datasets
 from .data.DataExperiments import prepare_training_data, resize_dataset_with_data_ratio
-from .models.Training import train_model
+from .data.DataLoader import load_additional_eval_datasets, load_train_datasets
+from .data.constants import model_id_mapper
 from .evaluation.Evaluation import eval_model_pipeline
+from .models.Training import train_model
 
 
 @click.command()
@@ -32,7 +32,6 @@ from .evaluation.Evaluation import eval_model_pipeline
 def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets, truncation, train_prep_experiment,
          data_ratios, try_speed, report_test, claims_set_id, learning_rate, batch_size, epochs, SEED):
     """Run main function."""
-
     # LOAD TOKENIZER
     ################
 
@@ -118,7 +117,3 @@ def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets
 
 if __name__ == '__main__':
     main()
-
-
-
-

@@ -1,12 +1,10 @@
-"""
-Collection of functions for loading and creating HF Datasets from input raw files.
-"""
+"""Collection of functions for loading and creating HF Datasets from input raw files."""
 
 # -*- coding: utf-8 -*-
 
-import pandas as pd
-
 from datasets import ClassLabel, Dataset, DatasetDict, load_dataset
+
+import pandas as pd
 
 from .CreateDatasetUtilities import generate_mancon_pandas_dfs, generate_roam_dd_pandas_dfs, \
     generate_roam_dd_ph_pandas_dfs, generate_roam_full_pandas_dfs, generate_roam_ph_pandas_dfs
@@ -85,7 +83,8 @@ def create_mednli_dataset(mednli_train_path: str, mednli_dev_path: str, mednli_t
     return mednli_dataset
 
 
-def create_mancon_dataset(mancon_xml_path: str, mancon_neutral_frac: float, mancon_train_frac: float, SEED: int, single_sent_only=False):
+def create_mancon_dataset(mancon_xml_path: str, mancon_neutral_frac: float, mancon_train_frac: float, SEED: int,
+                          single_sent_only=False):
     """
     Create the ManConCorpus HF DatasetDict.
 
@@ -93,9 +92,9 @@ def create_mancon_dataset(mancon_xml_path: str, mancon_neutral_frac: float, manc
     :param mancon_neutral_frac: the Neutrals class should = what fraction of the next largest class
     :param mancon_train_frac: what fraction should be used for train
     :param SEED: random seed
+    :param single_sent_only: if True, only create dataset containing only single claim as benchmark
     :return: ManConCorpus HF DatasetDict
     """
-
     # Load
     raw_mancon_pandas_df_dict = generate_mancon_pandas_dfs(mancon_xml_path, neutral_frac=mancon_neutral_frac,
                                                            mancon_train_frac=mancon_train_frac, SEED=SEED,

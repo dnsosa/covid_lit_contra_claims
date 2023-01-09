@@ -1,12 +1,10 @@
-"""
-Collection of functions for making experimental perturbations to the data for covid_lit_contra_claims.
-"""
+"""Collection of functions for making experimental perturbations to the data for covid_lit_contra_claims."""
 
 # -*- coding: utf-8 -*-
 
 import random
-
 from collections import OrderedDict
+
 from datasets import concatenate_datasets
 
 
@@ -20,7 +18,6 @@ def resize_dataset_with_data_ratio(dataset_dict: OrderedDict, data_ratios: float
     :param SEED: random seed
     :return: dict of HF Datasets that has been subsampled based on data_ratios
     """
-
     random.seed(SEED)
 
     # Using 500 = approx the size of the Roam disjoint training, 100 for val
@@ -57,7 +54,6 @@ def prepare_training_data(train_dataset_dict: OrderedDict, train_prep_experiment
     :param SEED: random seed
     :return: prepared_train_dataset_list: list of HF Datasets to be used for training after the perturbation
     """
-
     random.seed(SEED)
 
     # Now perturb the order based on the train_prep_experiment argument
@@ -68,7 +64,7 @@ def prepare_training_data(train_dataset_dict: OrderedDict, train_prep_experiment
         prepared_train_dataset_dict = OrderedDict({combined_key: combined.shuffle(seed=SEED)})
 
     elif train_prep_experiment == "sequential":
-        print(f"Sequential training data preparation. Dataset list will not be perturbed.")
+        print("Sequential training data preparation. Dataset list will not be perturbed.")
         prepared_train_dataset_dict = train_dataset_dict
 
     elif train_prep_experiment == "shuffled":

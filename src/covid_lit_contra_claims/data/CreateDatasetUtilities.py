@@ -1,34 +1,34 @@
-"""
-Additional utility functions for the CreateDataset script.
-"""
+"""Additional utility functions for the CreateDataset script."""
 
 # -*- coding: utf-8 -*-
 
-import numpy as np
-import pandas as pd
-import xml.etree.ElementTree as ET
-
 from itertools import combinations
+from xml.etree import ElementTree
+
+import numpy as np
+
+import pandas as pd
+
 from sklearn.model_selection import train_test_split
 
-from .constants import DD_TRAIN_FRAC, DD_PH_TRAIN_FRAC, N_DD, PH_TRAIN_FRAC, ROAM_FULL_TRAIN_FRAC
+from .constants import DD_PH_TRAIN_FRAC, DD_TRAIN_FRAC, N_DD, PH_TRAIN_FRAC, ROAM_FULL_TRAIN_FRAC
 
 DRUG_LIST = ["hydroxychloroquine", " chloroquine", "tocilizumab", "remdesivir", "vitamin d", "lopinavir",
              "dexamethasone"]
 
 
-def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_frac: float, SEED: int, single_sent_only: bool):
+def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_frac: float, SEED: int,
+                               single_sent_only: bool):
     """
     Create sentence pairs dataset from the original xml ManCon Corpus.
 
     :param xml_path: path to xml corpus
-    :param neutral_frac: sample the neutrals to have size (neutral_frac * size_of_next_biggest_class), if None don't downsample
+    :param neutral_frac: sample the neutrals to have size (NF * [size of_next_biggest_class]), if None don't downsample
     :param mancon_train_frac: the fraction of questions in ManCon that should devoted to just training
     :param SEED: random seed
     :return: ManCon
     """
-
-    xtree = ET.parse(xml_path)  # TODO: Fix error # noqa: S314
+    xtree = ElementTree.parse(xml_path)  # noqa: S314
     xroot = xtree.getroot()
 
     # manconcorpus_data = pd.DataFrame(columns=['claim', 'assertion', 'question'])
@@ -43,7 +43,8 @@ def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_
     manconcorpus_data = pd.DataFrame(manconcorpus_df_list)
 
     questions = list(set(manconcorpus_data.question))
-    train_qs, valtest_qs = train_test_split(questions, test_size=(1 -mancon_train_frac), shuffle=True, random_state=SEED)
+    train_qs, valtest_qs = train_test_split(questions, test_size=(1 - mancon_train_frac), shuffle=True,
+                                            random_state=SEED)
     val_qs, test_qs = train_test_split(valtest_qs, test_size=0.5, shuffle=True, random_state=SEED)
 
     mancon_nli_df_dict = {}
@@ -58,10 +59,11 @@ def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_
             prev_qs.append(q)
 
             # Find the yes and nos for this Q
-            claim_yes = pd.DataFrame(manconcorpus_data.loc[(manconcorpus_data.question == q) &
-                                                           (manconcorpus_data.assertion == 'YS'), 'claim'])  # noqa: W503
-            claim_no = pd.DataFrame(manconcorpus_data.loc[(manconcorpus_data.question == q) &
-                                                          (manconcorpus_data.assertion == 'NO'), 'claim'])  # noqa: W503
+            mc_q = (manconcorpus_data.question == q)
+            mc_yes = (manconcorpus_data.assertion == 'YS')
+            mc_no = (manconcorpus_data.assertion == 'NO')
+            claim_yes = pd.DataFrame(manconcorpus_data.loc[mc_q & mc_yes, 'claim'])
+            claim_no = pd.DataFrame(manconcorpus_data.loc[mc_q & mc_no, 'claim'])
 
             # Create the contras
             temp = claim_yes.assign(key=1).merge(claim_no.assign(key=1), on='key').drop(columns='key')
@@ -84,8 +86,8 @@ def generate_mancon_pandas_dfs(xml_path: str, neutral_frac: float, mancon_train_
             temp['label'] = 'neutral'
             neu_list += temp.drop_duplicates().values.tolist()
 
-        mancon_nli_df = pd.concat([pd.DataFrame(con_list), pd.DataFrame(ent_list), pd.DataFrame(neu_list)]).reset_index(
-            drop=True)
+        mancon_nli_df = pd.concat([pd.DataFrame(con_list), pd.DataFrame(ent_list), pd.DataFrame(neu_list)]).\
+            reset_index(drop=True)
         mancon_nli_df.columns = ["sentence1", "sentence2", "label"]
 
         if neutral_frac is not None:
@@ -290,4 +292,3 @@ def generate_roam_dd_ph_pandas_dfs(roam_path: str, SEED: int, dd_ph_train_frac: 
     roam_dd_ph_df_dict = split_df_into_tvt_dict(roam_dd_ph, dd_ph_train_frac, SEED)
 
     return roam_dd_ph_df_dict
-
