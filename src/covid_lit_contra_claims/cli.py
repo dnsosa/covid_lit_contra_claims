@@ -14,21 +14,36 @@ from .models.Training import train_model
 
 
 @click.command()
-@click.option('--output_folder', 'out_dir')
-@click.option('--model', 'model')
-@click.option('--train_datasets', 'train_datasets')
-@click.option('--eval_datasets', 'eval_datasets', default="multinli_mednli_mancon_roam_roamPH_roamDD_roamDDPH")
-@click.option('--additional_eval_datasets', 'additional_eval_datasets', default=None)
-@click.option('--truncation/--no-truncation', 'truncation', default=True)
-@click.option('--train_prep_experiment', 'train_prep_experiment', default="sequential")
-@click.option('--data_ratios', 'data_ratios', default=None)
-@click.option('--speed/--no-speed', 'try_speed', default=True)
-@click.option('--report/--no-report', 'report_test', default=False)
-@click.option('--claims_set_id', 'claims_set_id', default=None)
-@click.option('--learning_rate', 'learning_rate', default=1e-6)
-@click.option('--batch_size', 'batch_size', default=2)
-@click.option('--epochs', 'epochs', default=3)
-@click.option('--SEED', 'SEED', default=42)
+@click.option('--output_folder', 'out_dir',
+              help='Output directory for all analyses.')
+@click.option('--model', 'model',
+              help='Identifier for pre-trained BERT model (roberta, biobert, bioclinbert, scibert, pubmedbert).')
+@click.option('--train_datasets', 'train_datasets',
+              help="Identifier indicating which train datasets to use separated by '_' (e.g. multinli_mednli).")
+@click.option('--eval_datasets', 'eval_datasets', default="multinli_mednli_mancon_roam_roamPH_roamDD_roamDDPH",
+              help="Identifier indicating which eval datasets to use separated by '_' (e.g. roam).")
+@click.option('--additional_eval_datasets', 'additional_eval_datasets', default=None,
+              help="Identifier indicating which eval datasets to use separated by '_' (e.g. roam).")
+@click.option('--truncation/--no-truncation', 'truncation', default=True,
+              help="Use truncation in tokenizing and creating HF Datasets?")
+@click.option('--train_prep_experiment', 'train_prep_experiment', default="sequential",
+              help="Type of experiment for curriculum sequencing ('sequential', 'combined', 'shuffled').")
+@click.option('--data_ratios', 'data_ratios', default=None,
+              help="Indicates the ratio of training data from one corpus to the next in sequence.")
+@click.option('--speed/--no-speed', 'try_speed', default=True,
+              help="If true, try to do some HF recommended optimizations for speed.")
+@click.option('--report/--no-report', 'report_test', default=False,
+              help="If true, generate the report on the test split(s).")
+@click.option('--claims_set_id', 'claims_set_id', default=None,
+              help="Identifier for set of pairs to make NLI predictions (synth_hcq, claims_subset, all_claims).")
+@click.option('--learning_rate', 'learning_rate', default=1e-6,
+              help="Learning rate for HF fine-tuning.")
+@click.option('--batch_size', 'batch_size', default=2,
+              help="Batch size for HF fine-tuning.")
+@click.option('--epochs', 'epochs', default=3,
+              help="Number of epochs for each dataset in the curriculum during fine-tuning.")
+@click.option('--SEED', 'SEED', default=42,
+              help="Random seed.")
 def main(out_dir, model, train_datasets, eval_datasets, additional_eval_datasets, truncation, train_prep_experiment,
          data_ratios, try_speed, report_test, claims_set_id, learning_rate, batch_size, epochs, SEED):
     """Run main function."""
