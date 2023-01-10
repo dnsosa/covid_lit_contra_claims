@@ -147,5 +147,11 @@ compile_results.py
 notebooks/roam_covid_contradict.ipynb
 notebooks/making_roam_trainvaltest.ipynb
 notebooks/Experimental_New_Functionality.ipynb
+notebooks/ImplementingBenchmarks.ipynb
+notebooks/VisualizeOLD.ipynb
+notebooks/ApplicationSection.ipynb
 notebooks/Contradictory_claims_Roam_scaling_round_V2.xlsx
+src/covid_lit_contra_claims/cs224u/
+src/covid_lit_contra_claims/evaluation/nli.py
+src/covid_lit_contra_claims/evaluation/nli_utils.py
 LOGFILE
